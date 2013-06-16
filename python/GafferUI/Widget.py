@@ -966,6 +966,7 @@ class Widget( object ) :
 			padding-right: 8px;
 			border-top-left-radius: 3px;
 			border-top-right-radius: 3px;
+			height: 13px;
 			margin: 0px;
 
 		}
