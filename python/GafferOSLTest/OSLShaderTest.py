@@ -278,6 +278,26 @@ class OSLShaderTest( GafferOSLTest.OSLTestCase ) :
 		
 		self.assertTrue( inputClosure["parameters"]["i"].acceptsInput( outputClosure["out"]["c"] ) )
 		self.assertFalse( inputClosure["parameters"]["i"].acceptsInput( outputColor["out"]["c"] ) )
+	
+	def testArrayParameters( self ) :
+	
+		compiledShader = self.compileShader( os.path.dirname( __file__ ) + "/shaders/arrays.osl" )
+		shader = GafferOSL.OSLShader()
+		shader.loadShader( compiledShader )
+		
+		self.assertEqual( shader["parameters"].keys(), [ "intArray", "colorArray" ] )
+		self.assertTrue( isinstance( shader["parameters"]["intArray"], Gaffer.ArrayPlug ) )
+		self.assertTrue( isinstance( shader["parameters"]["colorArray"], Gaffer.ArrayPlug ) )
+		
+		self.assertEqual( len( shader["parameters"]["intArray"] ), 5 )
+		self.assertEqual( len( shader["parameters"]["colorArray"] ), 4 )
+		
+		self.assertTrue( isinstance( shader["parameters"]["intArray"][0], Gaffer.IntPlug ) )
+		self.assertTrue( isinstance( shader["parameters"]["colorArray"][0], Gaffer.Color3fPlug ) )
+
+		state = shader.state()
+		
+		print state[0].parameters()
 		
 if __name__ == "__main__":
 	unittest.main()

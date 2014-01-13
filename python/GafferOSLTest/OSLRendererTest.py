@@ -245,6 +245,66 @@ class OSLRendererTest( GafferOSLTest.OSLTestCase ) :
 					self.assertEqual( shading[n][i][0], points["P"][i][0] )
 					self.assertEqual( shading[n][i][1], points["P"][i][1] )
 					self.assertEqual( shading[n][i][2], points["P"][i][2] )
+	
+	def testArrayParameter( self ) :
+	
+		shader = self.compileShader( os.path.dirname( __file__ ) + "/shaders/arrays.osl" )
+		
+		r = GafferOSL.OSLRenderer()
+		with IECore.WorldBlock( r ) :
+				
+			r.shader(
+				"surface",
+				shader,
+				{
+					"intArray" : IECore.IntVectorData( range( 0, 5 ) ),
+					"colorArray" : IECore.Color3fVectorData( [ IECore.Color3f( x ) for x in range( 0, 4 ) ] ),
+					"intIndex" : 2,
+					"colorIndex" : 3,
+				}
+			)
 			
+			points = self.rectanglePoints()
+			shading = r.shadingEngine().shade( self.rectanglePoints() )
+		
+			self.assertEqual( shading["int"][0], 2 )
+			self.assertEqual( shading["color"][0], IECore.Color3f( 3 ) )
+			
+	def testArrayParameterConnections( self ) :
+	
+		shader = self.compileShader( os.path.dirname( __file__ ) + "/shaders/arrays.osl" )
+		inputShader = self.compileShader( os.path.dirname( __file__ ) + "/shaders/outputTypes.osl" )
+		
+		r = GafferOSL.OSLRenderer()
+		with IECore.WorldBlock( r ) :
+				
+			r.shader(
+				"shader",
+				inputShader,
+				{
+					"input" : 0.5,
+					"__handle" : "h",
+				}
+			)
+			
+			r.shader(
+				"surface",
+				shader,
+				{
+					"intArray" : IECore.IntVectorData( range( 0, 5 ) ),
+					"colorArray" : IECore.Color3fVectorData( [ IECore.Color3f( x ) for x in range( 0, 4 ) ] ),
+					"intArray[2]" : "link:h.i",
+					"colorArray[3]" : "link:h.c",
+					"intIndex" : 2,
+					"colorIndex" : 3,
+				}
+			)
+			
+			points = self.rectanglePoints()
+			shading = r.shadingEngine().shade( self.rectanglePoints() )
+		
+			self.assertEqual( shading["int"][0], 0.5 )
+			self.assertEqual( shading["color"][0], IECore.Color3f( 0.5 ) )
+				
 if __name__ == "__main__":
 	unittest.main()

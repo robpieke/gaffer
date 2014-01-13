@@ -40,6 +40,7 @@
 
 #include "Gaffer/NumericPlug.h"
 #include "Gaffer/CompoundNumericPlug.h"
+#include "Gaffer/ArrayPlug.h"
 
 #include "GafferOSL/OSLShader.h"
 
@@ -277,6 +278,29 @@ static Plug *loadStructParameter( const OSLQuery &query, const OSLQuery::Paramet
 	return result;
 }
 
+static Plug *loadArrayParameter( const OSLQuery &query, const OSLQuery::Parameter *parameter, Gaffer::CompoundPlug *parent )
+{
+	size_t minSize = parameter->type.arraylen > 0 ? parameter->type.arraylen : 0;
+	size_t maxSize = parameter->type.arraylen > 0 ? parameter->type.arraylen : Imath::limits<size_t>::max();
+	
+	const string name = plugName( parameter );
+	const string elementName = isdigit( *name.rbegin() ) ? name + "_0" : name + "0";
+	OSLQuery::Parameter elementParameter = *parameter;
+	elementParameter.type.unarray();
+	
+	CompoundPlugPtr tmpParent = new CompoundPlug( "tmpParent", parent->direction() );
+	loadShaderParameter( query, &elementParameter, tmpParent, false );
+	PlugPtr elementPlug = tmpParent->getChild<Plug>( 0 );
+	tmpParent = NULL;
+			
+	ArrayPlugPtr result = new ArrayPlug( name, parent->direction(), elementPlug, minSize, maxSize );
+	parent->setChild( name, result );
+	
+	/// \todo Preserve original values and connections
+	
+	return result;
+}
+
 static Plug *loadShaderParameter( const OSLQuery &query, const OSLQuery::Parameter *parameter, Gaffer::CompoundPlug *parent, bool keepExistingValues )
 {
 	Plug *result = NULL;
@@ -289,7 +313,11 @@ static Plug *loadShaderParameter( const OSLQuery &query, const OSLQuery::Paramet
 	{
 		result = loadClosureParameter( parameter, parent );
 	}
-	else if( parameter->type.arraylen == 0 )
+	else if( parameter->type.arraylen != 0 )
+	{
+		result = loadArrayParameter( query, parameter, parent );
+	}
+	else
 	{
 		if( parameter->type.basetype == TypeDesc::FLOAT || parameter->type.basetype == TypeDesc::INT )
 		{
@@ -328,10 +356,6 @@ static Plug *loadShaderParameter( const OSLQuery &query, const OSLQuery::Paramet
 		{
 			result = loadStringParameter( parameter, parent );
 		}
-	}
-	else
-	{
-		/// \todo support array parameters
 	}
 
 	if( !result )
