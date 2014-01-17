@@ -1368,19 +1368,38 @@ class Widget( object ) :
 			margin-right: -1px;
 		}
 		
-		QTreeView::branch {
-			border-image : none;
-			image : none;		
+		QTreeView::branch:has-siblings:!adjoins-item {
+			background-image : url($GAFFER_ROOT/graphics/branchVertical.png);
+			background-repeat : repeat-y;
+				background-position : center center;	
+		}
+		
+		QTreeView::branch:has-siblings:adjoins-item {
+			background-image : url($GAFFER_ROOT/graphics/branchMiddle.png);
+			background-repeat : repeat-y;
+			background-position : center center;	
+		}
+		
+		QTreeView::branch:has-siblings {
+			border : 1px solid red;
+		}
+		
+		QTreeView::branch:!has-children:!has-siblings:adjoins-item {
+			background-image : url($GAFFER_ROOT/graphics/branchEnd.png);
+			background-repeat : repeat-y;
+			background-position : center center;	
 		}
 
 		QTreeView::branch:closed:has-children {
 			border-image : none;
+			background : none;
 			image : url($GAFFER_ROOT/graphics/collapsibleArrowRight.png);
 		}
 		
 		QTreeView::branch:open:has-children {
-			border-image : none;
-			image : url($GAFFER_ROOT/graphics/collapsibleArrowDown.png);
+			background-image : url($GAFFER_ROOT/graphics/branchOpenMiddle.png);
+			background-repeat : repeat-y;
+			background-position : center center;
 		}
 		
 		/* checkbox */
