@@ -213,6 +213,11 @@ class GraphGadget : public ContainerGadget
 
 		void connectedNodeGadgetsWalk( NodeGadget *gadget, std::set<NodeGadget *> &connectedGadgets, Gaffer::Plug::Direction direction, size_t degreesOfSeparation );
 
+		// Returns plug->direction() unless the plug belongs to the root node,
+		// in which case the opposite direction is returned (because we view
+		// the root node from the inside, the sense is reversed).
+		Gaffer::Plug::Direction plugDirection( const Gaffer::Plug *plug ) const;
+
 		Gaffer::NodePtr m_root;
 		Gaffer::ScriptNodePtr m_scriptNode;
 		RootChangedSignal m_rootChangedSignal;
@@ -236,6 +241,8 @@ class GraphGadget : public ContainerGadget
 		typedef std::map<const Gaffer::Node *, NodeGadgetEntry> NodeGadgetMap;
 		NodeGadgetMap m_nodeGadgets;
 
+		// Maps from destination plug to the gadget representing the connection into that plug.
+		// Note that the destination plug might actually have direction()==Out.
 		typedef std::map<const Gaffer::Plug *, ConnectionGadget *> ConnectionGadgetMap;
 		ConnectionGadgetMap m_connectionGadgets;
 
