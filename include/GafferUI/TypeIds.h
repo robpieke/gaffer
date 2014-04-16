@@ -75,6 +75,7 @@ enum TypeId
 	HandleTypeId = 110280,
 	ToolTypeId = 110281,
 	DotNodeGadgetTypeId = 110282,
+	RootNodeGadgetTypeId = 110283,
 
 	LastTypeId = 110450
 };

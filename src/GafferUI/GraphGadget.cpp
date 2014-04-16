@@ -62,11 +62,112 @@
 #include "GafferUI/StandardGraphLayout.h"
 #include "GafferUI/Pointer.h"
 #include "GafferUI/BackdropNodeGadget.h"
+#include "GafferUI/StandardNodeGadget.h"
+#include "GafferUI/SpacerGadget.h"
 
 using namespace GafferUI;
 using namespace Imath;
 using namespace IECore;
 using namespace std;
+
+//////////////////////////////////////////////////////////////////////////
+// RootNodeGadget implementation
+// This is used to represent the plugs on the root that are connected
+// to the internal nodes. It automatically transforms itself so that it
+// will always fill the entire viewport, placing its nodules at the edges
+// of the viewport frame.
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+
+class RootNodeGadget : public StandardNodeGadget
+{
+
+	public :
+
+		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( RootNodeGadget, RootNodeGadgetTypeId, StandardNodeGadget );
+
+		RootNodeGadget( Gaffer::NodePtr node )
+			:	StandardNodeGadget( node )
+		{
+			setContents( new SpacerGadget( Box3f( V3f( 0 ), V3f( 100 ) ) ) );
+		}
+
+		virtual Imath::V3f noduleTangent( const Nodule *nodule ) const
+		{
+			return -StandardNodeGadget::noduleTangent( nodule );
+		}
+
+	protected :
+
+		virtual void doRender( const Style *style ) const
+		{
+			NodeGadget::doRender( style );
+		}
+
+		virtual void parentChanging( Gaffer::GraphComponent *newParent )
+		{
+			ViewportGadget *viewport = newParent ? newParent->ancestor<ViewportGadget>() : NULL;
+			if( viewport )
+			{
+				m_viewportChangedConnection = viewport->viewportChangedSignal().connect(
+					boost::bind( &RootNodeGadget::cameraOrViewportChanged, this )
+				);
+				m_cameraChangedConnection = viewport->cameraChangedSignal().connect(
+					boost::bind( &RootNodeGadget::cameraOrViewportChanged, this )
+				);
+			}
+			else
+			{
+				m_viewportChangedConnection.disconnect();
+				m_cameraChangedConnection.disconnect();
+			}
+		}
+
+	private :
+
+		// Transforms the gadget to cover the whole viewport
+		void cameraOrViewportChanged()
+		{
+
+			const ViewportGadget *viewportGadget = ancestor<ViewportGadget>();
+			const Gadget *parent = ancestor<Gadget>();
+			const V2f viewport = viewportGadget->getViewport();
+
+			// figure out how many pixels a unit in our parent's space will cover
+			const V2f p0 = viewportGadget->gadgetToRasterSpace( V3f( 0 ), parent );
+			const V2f p1 = viewportGadget->gadgetToRasterSpace( V3f( 0, 1, 0 ), parent );
+			const float pixelsPerUnit = p0.y - p1.y;
+
+			// based on that, choose a scale for ourselves that will make
+			// one unit of our gadget cover 10 pixels of the viewport.
+			const float scale = 10.0f / pixelsPerUnit;
+
+			// then figure out how big a spacer we need to push our nodules
+			// to the edge of the frame.
+			const V3f sizeWithoutSpacer = bound().size() - getContents()->bound().size();
+			const V2f spacerSize = viewport / ( pixelsPerUnit * scale ) - V2f( sizeWithoutSpacer.x, sizeWithoutSpacer.y );
+
+			// and the translation needed to put us at the centre of the viewport.
+			const V3f viewportCenter = viewportGadget->rasterToGadgetSpace( viewport / 2.0f, parent ).p0;
+
+			// apply the settings we've calculated
+			M44f transform;
+			transform.translate( V3f( viewportCenter.x, viewportCenter.y, 0 ) );
+			transform.scale( V3f( scale ) );
+			setTransform( transform );
+
+			SpacerGadget *spacer = static_cast<SpacerGadget *>( getContents() );
+			spacer->setSize( Box3f( V3f( 0 ), V3f( max( spacerSize.x, 0.0f ), max( spacerSize.y, 0.0f ), 0 ) ) );
+		}
+
+		boost::signals::scoped_connection m_viewportChangedConnection;
+		boost::signals::scoped_connection m_cameraChangedConnection;
+
+};
+
+} // namespace
 
 //////////////////////////////////////////////////////////////////////////
 // GraphGadget implementation
@@ -205,12 +306,15 @@ void GraphGadget::setFilter( Gaffer::SetPtr filter )
 
 NodeGadget *GraphGadget::nodeGadget( const Gaffer::Node *node )
 {
-	return findNodeGadget( node );
+	// internally we do use a RootNodeGadget for representing connections
+	// from the graph to the root node, but we consider that to be an implementation
+	// detail, and always return NULL for the root.
+	return node != m_root ? findNodeGadget( node ) : NULL;
 }
 
 const NodeGadget *GraphGadget::nodeGadget( const Gaffer::Node *node ) const
 {
-	return findNodeGadget( node );
+	return node != m_root ? findNodeGadget( node ) : NULL;
 }
 
 ConnectionGadget *GraphGadget::connectionGadget( const Gaffer::Plug *dstPlug )
@@ -671,10 +775,11 @@ void GraphGadget::inputChanged( Gaffer::Plug *dstPlug )
 		return;
 	}
 
-	if( dstPlug->direction() == Gaffer::Plug::Out )
+	if( plugDirection( dstPlug ) == Gaffer::Plug::Out )
 	{
-		// it's an internal connection - no need to
-		// represent it.
+		// it's an internal connection of a node in the graph,
+		// or an external connection of the root. either way
+		// we don't need to represent it.
 		return;
 	}
 
@@ -1274,8 +1379,12 @@ void GraphGadget::updateGraph()
 	for( NodeGadgetMap::iterator it = m_nodeGadgets.begin(); it != m_nodeGadgets.end(); )
 	{
 		const Gaffer::Node *node = it->first;
+		const bool isRootGadget = it->second.gadget->isInstanceOf( RootNodeGadget::staticTypeId() );
 		it++; // increment now as the iterator will be invalidated by removeNodeGadget()
-		if( (m_filter && !m_filter->contains( node )) || node->parent<Gaffer::Node>() != m_root )
+		if(
+			!( node == m_root && isRootGadget ) &&
+			!( node->parent<Gaffer::Node>() == m_root && (!m_filter || m_filter->contains( node )) && !isRootGadget )
+		)
 		{
 			removeNodeGadget( node );
 		}
@@ -1293,8 +1402,13 @@ void GraphGadget::updateGraph()
 		}
 	}
 
-	// and that we have gadgets for each connection
+	const bool rootIsNested = !m_root->isInstanceOf( Gaffer::ScriptNode::staticTypeId() );
+	if( rootIsNested && !findNodeGadget( m_root.get() ) )
+	{
+		addNodeGadget( m_root.get() );
+	}
 
+	// and check that we have gadgets for each connection
 	for( Gaffer::NodeIterator it( m_root.get() ); it != it.end(); it++ )
 	{
 		if( !m_filter || m_filter->contains( it->get() ) )
@@ -1303,11 +1417,17 @@ void GraphGadget::updateGraph()
 		}
 	}
 
+	if( rootIsNested )
+	{
+		addConnectionGadgets( m_root.get() );
+	}
+
 }
 
 NodeGadget *GraphGadget::addNodeGadget( Gaffer::Node *node )
 {
-	NodeGadgetPtr nodeGadget = NodeGadget::create( node );
+	NodeGadgetPtr nodeGadget = node == m_root ? new RootNodeGadget( m_root ) : NodeGadget::create( node );
+
 	if( !nodeGadget )
 	{
 		return NULL;
@@ -1375,8 +1495,6 @@ void GraphGadget::updateNodeGadgetTransform( NodeGadget *nodeGadget )
 
 void GraphGadget::addConnectionGadgets( Gaffer::GraphComponent *plugParent )
 {
-	/// \todo I think this could be faster if we could iterate over just the nodules rather than all the plugs. Perhaps
-	/// we could make it easy to recurse over all the Nodules of a NodeGadget if we had a RecursiveChildIterator for GraphComponents?
 	Gaffer::Node *node = plugParent->isInstanceOf( Gaffer::Node::staticTypeId() ) ? static_cast<Gaffer::Node *>( plugParent ) : plugParent->ancestor<Gaffer::Node>();
 
 	NodeGadget *nodeGadget = findNodeGadget( node );
@@ -1387,7 +1505,7 @@ void GraphGadget::addConnectionGadgets( Gaffer::GraphComponent *plugParent )
 
 	for( Gaffer::PlugIterator pIt( plugParent->children().begin(), plugParent->children().end() ); pIt!=pIt.end(); pIt++ )
 	{
-		if( (*pIt)->direction() == Gaffer::Plug::In )
+		if( plugDirection( pIt->get() ) == Gaffer::Plug::In )
 		{
 			// add connections for input plugs
 			if( !findConnectionGadget( pIt->get() ) )
@@ -1469,38 +1587,27 @@ void GraphGadget::addConnectionGadget( Gaffer::Plug *dstPlug )
 
 void GraphGadget::removeConnectionGadgets( const Gaffer::GraphComponent *plugParent )
 {
-
-	/// \todo I think this could be faster if we could iterate over just the nodules rather than all the plugs. Perhaps
-	/// we could make it easy to recurse over all the Nodules of a NodeGadget if we had a RecursiveChildIterator for GraphComponents?
-
 	for( Gaffer::PlugIterator pIt( plugParent->children().begin(), plugParent->children().end() ); pIt!=pIt.end(); pIt++ )
 	{
-		if( (*pIt)->direction() == Gaffer::Plug::In )
+		// remove connection gadget for the incoming connection for this plug.
+		removeConnectionGadget( pIt->get() );
+
+		// make output connection gadgets dangle
+		for( Gaffer::Plug::OutputContainer::const_iterator oIt( (*pIt)->outputs().begin() ); oIt!= (*pIt)->outputs().end(); oIt++ )
 		{
-			// remove input connection gadgets
+			ConnectionGadget *connection = findConnectionGadget( *oIt );
+			if( connection )
 			{
-				removeConnectionGadget( pIt->get() );
-			}
-		}
-		else
-		{
-			// make output connection gadgets dangle
-			for( Gaffer::Plug::OutputContainer::const_iterator oIt( (*pIt)->outputs().begin() ); oIt!= (*pIt)->outputs().end(); oIt++ )
-			{
-				ConnectionGadget *connection = findConnectionGadget( *oIt );
-				if( connection )
-				{
-					connection->setNodules( 0, connection->dstNodule() );
-				}
+				connection->setNodules( 0, connection->dstNodule() );
 			}
 		}
 
+		// recurse to child plugs
 		if( (*pIt)->isInstanceOf( Gaffer::CompoundPlug::staticTypeId() ) )
 		{
 			removeConnectionGadgets( pIt->get() );
 		}
 	}
-
 }
 
 void GraphGadget::removeConnectionGadget( const Gaffer::Plug *dstPlug )
@@ -1531,4 +1638,14 @@ void GraphGadget::updateConnectionGadgetMinimisation( ConnectionGadget *gadget )
 		minimised = minimised || getNodeOutputConnectionsMinimised( srcNodule->plug()->node() );
 	}
 	gadget->setMinimised( minimised );
+}
+
+Gaffer::Plug::Direction GraphGadget::plugDirection( const Gaffer::Plug *plug ) const
+{
+	Gaffer::Plug::Direction d = plug->direction();
+	if( plug->node() == m_root )
+	{
+		d = d == Gaffer::Plug::In ? Gaffer::Plug::Out : Gaffer::Plug::In;
+	}
+	return d;
 }

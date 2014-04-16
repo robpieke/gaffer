@@ -971,5 +971,107 @@ class NodeGraphTest( GafferUITest.TestCase ) :
 		self.assertTrue( "__uiPosition" in script["n1"] )
 		self.assertFalse( "__uiPosition1" in script["n1"] )
 
+	def testOutputConnectionsToRoot( self ) :
+
+		script = Gaffer.ScriptNode()
+
+		script["n1"] = GafferTest.AddNode()
+		script["n2"] = GafferTest.AddNode()
+		script["n2"]["op1"].setInput( script["n1"]["sum"] )
+
+		box = Gaffer.Box.create( script, Gaffer.StandardSet( [ script["n1"] ] ) )
+
+		g = GafferUI.GraphGadget( box )
+
+		c = g.connectionGadget( script["n2"]["op1"].getInput() )
+		self.assertTrue( c is not None )
+		self.assertTrue( c.dstNodule().plug().node() == box )
+
+	def testNodeGadgetReturnsNullForRoot( self ) :
+
+		script = Gaffer.ScriptNode()
+		g = GafferUI.GraphGadget( script )
+		self.assertTrue( g.nodeGadget( script ) is None )
+
+		script["b"] = Gaffer.Box()
+		self.assertTrue( g.nodeGadget( script["b"] ) is not None )
+
+		g.setRoot( script["b"] )
+		self.assertTrue( g.nodeGadget( script["b"] ) is None )
+
+	def testNodeGadgetDoesntReusePreviousRootGadget( self ) :
+
+		script = Gaffer.ScriptNode()
+		script["b"] = Gaffer.Box()
+
+		g1 = GafferUI.GraphGadget( script )
+		g2 = GafferUI.GraphGadget( script["b"] )
+
+		self.assertTrue( g1.nodeGadget( script["b"] ) is not None )
+		self.assertTrue( g2.nodeGadget( script["b"] ) is None )
+
+		g2.setRoot( script )
+
+		self.assertTrue( g2.nodeGadget( script["b"] ) is not None )
+		self.assertEqual( g2.nodeGadget( script["b"] ).typeName(), g1.nodeGadget( script["b"] ).typeName() )
+
+	def testInternalConnectionsRemovedAfterViewingBox( self ) :
+
+		script = Gaffer.ScriptNode()
+
+		script["n1"] = GafferTest.AddNode()
+		script["n2"] = GafferTest.AddNode()
+		script["n3"] = GafferTest.AddNode()
+		script["n2"]["op1"].setInput( script["n1"]["sum"] )
+		script["n3"]["op1"].setInput( script["n2"]["sum"] )
+
+		box = Gaffer.Box.create( script, Gaffer.StandardSet( [ script["n2"] ] ) )
+
+		g = GafferUI.GraphGadget( box )
+		self.assertTrue( g.connectionGadget( box["n2"]["op1"] ) is not None )
+		self.assertTrue( g.connectionGadget( box["n2"]["sum"].outputs()[0] ) is not None )
+
+		g.setRoot( script )
+
+		self.assertTrue( g.connectionGadget( box["n2"]["op1"] ) is None )
+		self.assertTrue( g.connectionGadget( box["n2"]["sum"].outputs()[0] ) is None )
+
+	def testExternalConnectionsNotRepresentedForBoxRoot( self ) :
+
+		script = Gaffer.ScriptNode()
+
+		script["n1"] = GafferTest.AddNode()
+		script["n2"] = GafferTest.AddNode()
+		script["n3"] = GafferTest.AddNode()
+		script["n2"]["op1"].setInput( script["n1"]["sum"] )
+		script["n3"]["op1"].setInput( script["n2"]["sum"] )
+
+		box = Gaffer.Box.create( script, Gaffer.StandardSet( [ script["n2"] ] ) )
+		g = GafferUI.GraphGadget( box )
+
+		self.assertTrue( g.connectionGadget( box["n2"]["op1"].getInput() ) is None )
+		self.assertTrue( g.connectionGadget( script["n3"]["op1"] ) is None )
+
+	def testExternalConnectionsNotRepresentedWhenSwitchingToBoxRoot( self ) :
+
+		script = Gaffer.ScriptNode()
+
+		script["n1"] = GafferTest.AddNode()
+		script["n2"] = GafferTest.AddNode()
+		script["n3"] = GafferTest.AddNode()
+		script["n2"]["op1"].setInput( script["n1"]["sum"] )
+		script["n3"]["op1"].setInput( script["n2"]["sum"] )
+
+		box = Gaffer.Box.create( script, Gaffer.StandardSet( [ script["n2"] ] ) )
+		g = GafferUI.GraphGadget( script )
+
+		self.assertTrue( g.connectionGadget( box["n2"]["op1"].getInput() ) is not None )
+		self.assertTrue( g.connectionGadget( script["n3"]["op1"] ) is not None )
+
+		g.setRoot( box )
+
+		self.assertTrue( g.connectionGadget( box["n2"]["op1"].getInput() ) is None )
+		self.assertTrue( g.connectionGadget( script["n3"]["op1"] ) is None )
+
 if __name__ == "__main__":
 	unittest.main()
