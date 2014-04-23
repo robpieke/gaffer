@@ -364,33 +364,72 @@ bool StandardNodule::drop( GadgetPtr gadget, const DragDropEvent &event )
 
 void StandardNodule::connection( const DragDropEvent &event, Gaffer::PlugPtr &input, Gaffer::PlugPtr &output )
 {
-	Gaffer::PlugPtr dropPlug = IECore::runTimeCast<Gaffer::Plug>( event.data );
-	if( dropPlug )
+	input = output = NULL;
+	Gaffer::Plug *dropPlug = IECore::runTimeCast<Gaffer::Plug>( event.data.get() );
+	if( !dropPlug )
 	{
-		Gaffer::PlugPtr thisPlug = plug();
-		if( thisPlug->node() != dropPlug->node() && thisPlug->direction()!=dropPlug->direction() )
-		{
-			if( thisPlug->direction()==Gaffer::Plug::In )
-			{
-				input = thisPlug;
-				output = dropPlug;
-			}
-			else
-			{
-				input = dropPlug;
-				output = thisPlug;
-			}
+		return;
+	}
 
-			if( input->acceptsInput( output.get() ) )
-			{
-				// success
-				return;
-			}
+	Gaffer::Plug *thisPlug = plug();
+	const Gaffer::Node *thisNode = thisPlug->node();
+	const Gaffer::Node *dropNode = dropPlug->node();
+	if( thisNode == dropNode )
+	{
+		// don't want to make connections between plugs on the same node
+		return;
+	}
+
+	// get the effective directions of each plug. if one is on a node
+	// which is the parent of the other's node, then we must reverse
+	// the direction to account for the fact that it's an interior one.
+	Gaffer::Plug::Direction dropDirection = dropPlug->direction();
+	Gaffer::Plug::Direction thisDirection = thisPlug->direction();
+
+	if( dropNode && thisNode )
+	{
+		if( thisNode == dropNode->parent<Gaffer::Node>() )
+		{
+			thisDirection = thisDirection == Gaffer::Plug::In ? Gaffer::Plug::Out : Gaffer::Plug::In;
+		}
+		else if( dropNode == thisNode->parent<Gaffer::Node>() )
+		{
+			dropDirection = dropDirection == Gaffer::Plug::In ? Gaffer::Plug::Out : Gaffer::Plug::In;
+		}
+		else if( dropNode->parent<Gaffer::Node>() != thisNode->parent<Gaffer::Node>() )
+		{
+			// don't want to encourage the creation of connections
+			// across different levels of hierarchy.
+			return;
 		}
 	}
 
-	input = output = 0;
-	return;
+	if( dropDirection == thisDirection )
+	{
+		// don't want to make connections between
+		// identical directions.
+		return;
+	}
+
+	Gaffer::Plug *inputCandidate;
+	Gaffer::Plug *outputCandidate;
+	if( thisDirection==Gaffer::Plug::In )
+	{
+		inputCandidate = thisPlug;
+		outputCandidate = dropPlug;
+	}
+	else
+	{
+		inputCandidate = dropPlug;
+		outputCandidate = thisPlug;
+	}
+
+	if( inputCandidate->acceptsInput( outputCandidate ) )
+	{
+		// success
+		input = inputCandidate;
+		output = outputCandidate;
+	}
 }
 
 void StandardNodule::setCompatibleLabelsVisible( const DragDropEvent &event, bool visible )
