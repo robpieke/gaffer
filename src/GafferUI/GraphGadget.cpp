@@ -61,6 +61,7 @@
 #include "GafferUI/StandardGraphLayout.h"
 #include "GafferUI/Pointer.h"
 #include "GafferUI/BackdropNodeGadget.h"
+#include "GafferUI/RootNodeGadget.h"
 
 using namespace GafferUI;
 using namespace Imath;
@@ -573,7 +574,10 @@ void GraphGadget::doRender( const Style *style ) const
 	/// and perhaps to also allow one gadget to draw into multiple layers.
 	for( ChildContainer::const_iterator it=children().begin(); it!=children().end(); it++ )
 	{
-		if( (*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId ) )
+		if(
+			(*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId ) ||
+			(*it)->isInstanceOf( (IECore::TypeId)RootNodeGadgetTypeId )
+		)
 		{
 			static_cast<const Gadget *>( it->get() )->render( style );
 		}
@@ -595,10 +599,10 @@ void GraphGadget::doRender( const Style *style ) const
 		if ( m_dragReconnectDstNodule )
 		{
 			const Nodule *srcNodule = m_dragReconnectCandidate->srcNodule();
-			const NodeGadget *srcNodeGadget = nodeGadget( srcNodule->plug()->node() );
+			const NodeGadget *srcNodeGadget = findNodeGadget( srcNodule->plug()->node() );
 			const Imath::V3f srcP = srcNodule->fullTransform( this ).translation();
 			const Imath::V3f dstP = m_dragReconnectDstNodule->fullTransform( this ).translation();
-			const Imath::V3f dstTangent = nodeGadget( m_dragReconnectDstNodule->plug()->node() )->noduleTangent( m_dragReconnectDstNodule );
+			const Imath::V3f dstTangent = findNodeGadget( m_dragReconnectDstNodule->plug()->node() )->noduleTangent( m_dragReconnectDstNodule );
 			/// \todo: can there be a highlighted/dashed state?
 			style->renderConnection( srcP, srcNodeGadget->noduleTangent( srcNodule ), dstP, dstTangent, Style::HighlightedState );
 		}
@@ -606,10 +610,10 @@ void GraphGadget::doRender( const Style *style ) const
 		if ( m_dragReconnectSrcNodule )
 		{
 			const Nodule *dstNodule = m_dragReconnectCandidate->dstNodule();
-			const NodeGadget *dstNodeGadget = nodeGadget( dstNodule->plug()->node() );
+			const NodeGadget *dstNodeGadget = findNodeGadget( dstNodule->plug()->node() );
 			const Imath::V3f srcP = m_dragReconnectSrcNodule->fullTransform( this ).translation();
 			const Imath::V3f dstP = dstNodule->fullTransform( this ).translation();
-			const Imath::V3f srcTangent = nodeGadget( m_dragReconnectSrcNodule->plug()->node() )->noduleTangent( m_dragReconnectSrcNodule );
+			const Imath::V3f srcTangent = findNodeGadget( m_dragReconnectSrcNodule->plug()->node() )->noduleTangent( m_dragReconnectSrcNodule );
 			/// \todo: can there be a highlighted/dashed state?
 			style->renderConnection( srcP, srcTangent, dstP, dstNodeGadget->noduleTangent( dstNodule ), Style::HighlightedState );
 		}
@@ -618,7 +622,11 @@ void GraphGadget::doRender( const Style *style ) const
 	// then render the rest on top
 	for( ChildContainer::const_iterator it=children().begin(); it!=children().end(); it++ )
 	{
-		if( !((*it)->isInstanceOf( ConnectionGadget::staticTypeId() )) && !((*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId )) )
+		if(
+			!((*it)->isInstanceOf( ConnectionGadget::staticTypeId() )) &&
+			!((*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId )) &&
+			!((*it)->isInstanceOf( (IECore::TypeId)RootNodeGadgetTypeId ))
+		)
 		{
 			static_cast<const Gadget *>( it->get() )->render( style );
 		}
