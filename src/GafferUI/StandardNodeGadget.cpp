@@ -630,19 +630,47 @@ Nodule *StandardNodeGadget::closestCompatibleNodule( const DragDropEvent &event 
 
 bool StandardNodeGadget::noduleIsCompatible( const Nodule *nodule, const DragDropEvent &event )
 {
+	/// \todo We're effectively just reproducing the logic in StandardNodule::connection()
+	/// here - should we come up with a way of sharing the code?
+
 	const Plug *dropPlug = IECore::runTimeCast<Gaffer::Plug>( event.data.get() );
-	if( !dropPlug || dropPlug->node() == node() )
+	if( !dropPlug )
 	{
-		return 0;
+		return false;
+	}
+
+	const Node *dropNode = dropPlug->node();
+	if( dropNode == node() )
+	{
+		return false;
 	}
 
 	const Plug *nodulePlug = nodule->plug();
-	if( dropPlug->direction() == Plug::Out )
+
+	Plug::Direction dropDirection = dropPlug->direction();
+	Plug::Direction noduleDirection = nodulePlug->direction();
+	if( dropNode )
 	{
-		return nodulePlug->direction() == Plug::In && nodulePlug->acceptsInput( dropPlug );
+		if( node() == dropNode->parent<Node>() )
+		{
+			noduleDirection = noduleDirection == Plug::In ? Plug::Out : Plug::In;
+		}
+		else if( dropNode == node()->parent<Node>() )
+		{
+			dropDirection = dropDirection == Plug::In ? Plug::Out : Plug::In;
+		}
+		else if( dropNode->parent<Node>() != node()->parent<Node>() )
+		{
+			return false;
+		}
+	}
+
+	if( dropDirection == Plug::Out )
+	{
+		return noduleDirection == Plug::In && nodulePlug->acceptsInput( dropPlug );
 	}
 	else
 	{
-		return nodulePlug->direction() == Plug::Out && dropPlug->acceptsInput( nodulePlug );
+		return noduleDirection == Plug::Out && dropPlug->acceptsInput( nodulePlug );
 	}
 }
