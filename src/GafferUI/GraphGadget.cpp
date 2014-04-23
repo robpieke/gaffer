@@ -62,112 +62,12 @@
 #include "GafferUI/StandardGraphLayout.h"
 #include "GafferUI/Pointer.h"
 #include "GafferUI/BackdropNodeGadget.h"
-#include "GafferUI/StandardNodeGadget.h"
-#include "GafferUI/SpacerGadget.h"
+#include "GafferUI/RootNodeGadget.h"
 
 using namespace GafferUI;
 using namespace Imath;
 using namespace IECore;
 using namespace std;
-
-//////////////////////////////////////////////////////////////////////////
-// RootNodeGadget implementation
-// This is used to represent the plugs on the root that are connected
-// to the internal nodes. It automatically transforms itself so that it
-// will always fill the entire viewport, placing its nodules at the edges
-// of the viewport frame.
-//////////////////////////////////////////////////////////////////////////
-
-namespace
-{
-
-class RootNodeGadget : public StandardNodeGadget
-{
-
-	public :
-
-		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( RootNodeGadget, RootNodeGadgetTypeId, StandardNodeGadget );
-
-		RootNodeGadget( Gaffer::NodePtr node )
-			:	StandardNodeGadget( node )
-		{
-			setContents( new SpacerGadget( Box3f( V3f( 0 ), V3f( 100 ) ) ) );
-		}
-
-		virtual Imath::V3f noduleTangent( const Nodule *nodule ) const
-		{
-			return -StandardNodeGadget::noduleTangent( nodule );
-		}
-
-	protected :
-
-		virtual void doRender( const Style *style ) const
-		{
-			NodeGadget::doRender( style );
-		}
-
-		virtual void parentChanging( Gaffer::GraphComponent *newParent )
-		{
-			ViewportGadget *viewport = newParent ? newParent->ancestor<ViewportGadget>() : NULL;
-			if( viewport )
-			{
-				m_viewportChangedConnection = viewport->viewportChangedSignal().connect(
-					boost::bind( &RootNodeGadget::cameraOrViewportChanged, this )
-				);
-				m_cameraChangedConnection = viewport->cameraChangedSignal().connect(
-					boost::bind( &RootNodeGadget::cameraOrViewportChanged, this )
-				);
-			}
-			else
-			{
-				m_viewportChangedConnection.disconnect();
-				m_cameraChangedConnection.disconnect();
-			}
-		}
-
-	private :
-
-		// Transforms the gadget to cover the whole viewport
-		void cameraOrViewportChanged()
-		{
-
-			const ViewportGadget *viewportGadget = ancestor<ViewportGadget>();
-			const Gadget *parent = ancestor<Gadget>();
-			const V2f viewport = viewportGadget->getViewport();
-
-			// figure out how many pixels a unit in our parent's space will cover
-			const V2f p0 = viewportGadget->gadgetToRasterSpace( V3f( 0 ), parent );
-			const V2f p1 = viewportGadget->gadgetToRasterSpace( V3f( 0, 1, 0 ), parent );
-			const float pixelsPerUnit = p0.y - p1.y;
-
-			// based on that, choose a scale for ourselves that will make
-			// one unit of our gadget cover 10 pixels of the viewport.
-			const float scale = 10.0f / pixelsPerUnit;
-
-			// then figure out how big a spacer we need to push our nodules
-			// to the edge of the frame.
-			const V3f sizeWithoutSpacer = bound().size() - getContents()->bound().size();
-			const V2f spacerSize = viewport / ( pixelsPerUnit * scale ) - V2f( sizeWithoutSpacer.x, sizeWithoutSpacer.y );
-
-			// and the translation needed to put us at the centre of the viewport.
-			const V3f viewportCenter = viewportGadget->rasterToGadgetSpace( viewport / 2.0f, parent ).p0;
-
-			// apply the settings we've calculated
-			M44f transform;
-			transform.translate( V3f( viewportCenter.x, viewportCenter.y, 0 ) );
-			transform.scale( V3f( scale ) );
-			setTransform( transform );
-
-			SpacerGadget *spacer = static_cast<SpacerGadget *>( getContents() );
-			spacer->setSize( Box3f( V3f( 0 ), V3f( max( spacerSize.x, 0.0f ), max( spacerSize.y, 0.0f ), 0 ) ) );
-		}
-
-		boost::signals::scoped_connection m_viewportChangedConnection;
-		boost::signals::scoped_connection m_cameraChangedConnection;
-
-};
-
-} // namespace
 
 //////////////////////////////////////////////////////////////////////////
 // GraphGadget implementation
@@ -603,7 +503,10 @@ void GraphGadget::doRender( const Style *style ) const
 	/// and perhaps to also allow one gadget to draw into multiple layers.
 	for( ChildContainer::const_iterator it=children().begin(); it!=children().end(); it++ )
 	{
-		if( (*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId ) )
+		if(
+			(*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId ) ||
+			(*it)->isInstanceOf( (IECore::TypeId)RootNodeGadgetTypeId )
+		)
 		{
 			static_cast<const Gadget *>( it->get() )->render( style );
 		}
@@ -625,10 +528,10 @@ void GraphGadget::doRender( const Style *style ) const
 		if ( m_dragReconnectDstNodule )
 		{
 			const Nodule *srcNodule = m_dragReconnectCandidate->srcNodule();
-			const NodeGadget *srcNodeGadget = nodeGadget( srcNodule->plug()->node() );
+			const NodeGadget *srcNodeGadget = findNodeGadget( srcNodule->plug()->node() );
 			const Imath::V3f srcP = srcNodule->fullTransform( this ).translation();
 			const Imath::V3f dstP = m_dragReconnectDstNodule->fullTransform( this ).translation();
-			const Imath::V3f dstTangent = nodeGadget( m_dragReconnectDstNodule->plug()->node() )->noduleTangent( m_dragReconnectDstNodule );
+			const Imath::V3f dstTangent = findNodeGadget( m_dragReconnectDstNodule->plug()->node() )->noduleTangent( m_dragReconnectDstNodule );
 			/// \todo: can there be a highlighted/dashed state?
 			style->renderConnection( srcP, srcNodeGadget->noduleTangent( srcNodule ), dstP, dstTangent, Style::HighlightedState );
 		}
@@ -636,10 +539,10 @@ void GraphGadget::doRender( const Style *style ) const
 		if ( m_dragReconnectSrcNodule )
 		{
 			const Nodule *dstNodule = m_dragReconnectCandidate->dstNodule();
-			const NodeGadget *dstNodeGadget = nodeGadget( dstNodule->plug()->node() );
+			const NodeGadget *dstNodeGadget = findNodeGadget( dstNodule->plug()->node() );
 			const Imath::V3f srcP = m_dragReconnectSrcNodule->fullTransform( this ).translation();
 			const Imath::V3f dstP = dstNodule->fullTransform( this ).translation();
-			const Imath::V3f srcTangent = nodeGadget( m_dragReconnectSrcNodule->plug()->node() )->noduleTangent( m_dragReconnectSrcNodule );
+			const Imath::V3f srcTangent = findNodeGadget( m_dragReconnectSrcNodule->plug()->node() )->noduleTangent( m_dragReconnectSrcNodule );
 			/// \todo: can there be a highlighted/dashed state?
 			style->renderConnection( srcP, srcTangent, dstP, dstNodeGadget->noduleTangent( dstNodule ), Style::HighlightedState );
 		}
@@ -648,7 +551,11 @@ void GraphGadget::doRender( const Style *style ) const
 	// then render the rest on top
 	for( ChildContainer::const_iterator it=children().begin(); it!=children().end(); it++ )
 	{
-		if( !((*it)->isInstanceOf( ConnectionGadget::staticTypeId() )) && !((*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId )) )
+		if(
+			!((*it)->isInstanceOf( ConnectionGadget::staticTypeId() )) &&
+			!((*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId )) &&
+			!((*it)->isInstanceOf( (IECore::TypeId)RootNodeGadgetTypeId ))
+		)
 		{
 			static_cast<const Gadget *>( it->get() )->render( style );
 		}
