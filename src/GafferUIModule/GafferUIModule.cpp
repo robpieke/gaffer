@@ -76,6 +76,7 @@
 #include "GafferUIBindings/DotNodeGadgetBinding.h"
 #include "GafferUIBindings/PathListingWidgetBinding.h"
 #include "GafferUIBindings/RootNodeGadgetBinding.h"
+#include "GafferUIBindings/PlugPromoterBinding.h"
 
 using namespace GafferUIBindings;
 
@@ -121,5 +122,5 @@ BOOST_PYTHON_MODULE( _GafferUI )
 	bindDotNodeGadget();
 	bindPathListingWidget();
 	bindRootNodeGadget();
-
+	bindPlugPromoter();
 }
