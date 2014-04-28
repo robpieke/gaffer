@@ -34,46 +34,54 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef GAFFERUI_ROOTNODEGADGET_H
-#define GAFFERUI_ROOTNODEGADGET_H
+#ifndef GAFFERUI_PLUGPROMOTER_H
+#define GAFFERUI_PLUGPROMOTER_H
 
-#include "GafferUI/StandardNodeGadget.h"
+#include "GafferUI/Gadget.h"
+
+namespace Gaffer
+{
+
+IE_CORE_FORWARDDECLARE( Box )
+
+} // namespace Gaffer
 
 namespace GafferUI
 {
 
-class RootNodeGadget : public StandardNodeGadget
+/// A Gadget to facilitate the creation of additional
+/// Nodules on Boxes.
+class PlugPromoter : public Gadget
 {
 
 	public :
 
-		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( RootNodeGadget, RootNodeGadgetTypeId, StandardNodeGadget );
+		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( GafferUI::PlugPromoter, PlugPromoterTypeId, Gadget );
 
-		RootNodeGadget( Gaffer::NodePtr node );
-
-		virtual Imath::V3f noduleTangent( const Nodule *nodule ) const;
+		PlugPromoter( Gaffer::BoxPtr box );
+		virtual ~PlugPromoter();
 
 		virtual Imath::Box3f bound() const;
 
 	protected :
 
 		virtual void doRender( const Style *style ) const;
-		virtual void parentChanging( Gaffer::GraphComponent *newParent );
 
 	private :
 
-		void parentRenderRequest( Gaffer::GraphComponent *parent );
-		void updateBound() const;
+		bool dragEnter( const DragDropEvent &event );
+		bool dragLeave( const DragDropEvent &event );
+		bool drop( const DragDropEvent &event );
 
-		boost::signals::scoped_connection m_parentRenderRequestConnection;
-		mutable bool m_clean;
+		Gaffer::BoxPtr m_box;
+
 };
 
-IE_CORE_DECLAREPTR( RootNodeGadget )
+IE_CORE_DECLAREPTR( PlugPromoter )
 
-typedef Gaffer::FilteredChildIterator<Gaffer::TypePredicate<RootNodeGadget> > RootNodeGadgetIterator;
-typedef Gaffer::FilteredRecursiveChildIterator<Gaffer::TypePredicate<RootNodeGadget> > RecursiveRootNodeGadgetIterator;
+typedef Gaffer::FilteredChildIterator<Gaffer::TypePredicate<PlugPromoter> > PlugPromoterIterator;
+typedef Gaffer::FilteredRecursiveChildIterator<Gaffer::TypePredicate<PlugPromoter> > RecursivePlugPromoterIterator;
 
 } // namespace GafferUI
 
-#endif // GAFFERUI_ROOTNODEGADGET_H
+#endif // GAFFERUI_PLUGPROMOTER_H

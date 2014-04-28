@@ -245,3 +245,36 @@ def __nodeGraphPlugContextMenu( nodeGraph, plug, menuDefinition ) :
 	menuDefinition.append( "/Delete", { "command" : IECore.curry( __deletePlug, plug ) } )
 
 __nodeGraphPlugContextMenuConnection = GafferUI.NodeGraph.plugContextMenuSignal().connect( __nodeGraphPlugContextMenu )
+
+# NodeGraph plug context menu
+##########################################################################
+
+def __nodeGadgetCreator( node ) :
+
+	g = GafferUI.StandardNodeGadget( node )
+
+	for edge in (
+		g.Edge.TopEdge,
+		g.Edge.BottomEdge,
+		g.Edge.LeftEdge,
+		g.Edge.RightEdge,
+	) :
+
+		spacer = g.getEdgeGadget( edge )
+
+		orientation = GafferUI.LinearContainer.Orientation.X if edge in ( g.Edge.TopEdge, g.Edge.BottomEdge ) else GafferUI.LinearContainer.Orientation.Y
+
+		l = GafferUI.LinearContainer(
+			orientation = orientation,
+			spacing = 2.0 if orientation == GafferUI.LinearContainer.Orientation.X else 0.5,
+			direction = GafferUI.LinearContainer.Direction.Increasing if orientation == GafferUI.LinearContainer.Orientation.X else GafferUI.LinearContainer.Direction.Decreasing
+		)
+
+		g.setEdgeGadget( edge, l )
+
+		l.addChild( GafferUI.PlugPromoter( node ) )
+		l.addChild( spacer )
+
+	return g
+
+GafferUI.NodeGadget.registerNodeGadget( Gaffer.Box.staticTypeId(), __nodeGadgetCreator )

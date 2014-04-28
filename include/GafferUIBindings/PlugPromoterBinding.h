@@ -34,46 +34,14 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef GAFFERUI_ROOTNODEGADGET_H
-#define GAFFERUI_ROOTNODEGADGET_H
+#ifndef GAFFERUIBINDINGS_PLUGPROMOTERBINDING_H
+#define GAFFERUIBINDINGS_PLUGPROMOTERBINDING_H
 
-#include "GafferUI/StandardNodeGadget.h"
-
-namespace GafferUI
+namespace GafferUIBindings
 {
 
-class RootNodeGadget : public StandardNodeGadget
-{
+void bindPlugPromoter();
 
-	public :
+} // namespace GafferUIBindings
 
-		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( RootNodeGadget, RootNodeGadgetTypeId, StandardNodeGadget );
-
-		RootNodeGadget( Gaffer::NodePtr node );
-
-		virtual Imath::V3f noduleTangent( const Nodule *nodule ) const;
-
-		virtual Imath::Box3f bound() const;
-
-	protected :
-
-		virtual void doRender( const Style *style ) const;
-		virtual void parentChanging( Gaffer::GraphComponent *newParent );
-
-	private :
-
-		void parentRenderRequest( Gaffer::GraphComponent *parent );
-		void updateBound() const;
-
-		boost::signals::scoped_connection m_parentRenderRequestConnection;
-		mutable bool m_clean;
-};
-
-IE_CORE_DECLAREPTR( RootNodeGadget )
-
-typedef Gaffer::FilteredChildIterator<Gaffer::TypePredicate<RootNodeGadget> > RootNodeGadgetIterator;
-typedef Gaffer::FilteredRecursiveChildIterator<Gaffer::TypePredicate<RootNodeGadget> > RecursiveRootNodeGadgetIterator;
-
-} // namespace GafferUI
-
-#endif // GAFFERUI_ROOTNODEGADGET_H
+#endif // GAFFERUIBINDINGS_PLUGPROMOTERBINDING_H

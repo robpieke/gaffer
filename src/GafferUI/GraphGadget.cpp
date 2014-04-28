@@ -503,10 +503,7 @@ void GraphGadget::doRender( const Style *style ) const
 	/// and perhaps to also allow one gadget to draw into multiple layers.
 	for( ChildContainer::const_iterator it=children().begin(); it!=children().end(); it++ )
 	{
-		if(
-			(*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId ) ||
-			(*it)->isInstanceOf( (IECore::TypeId)RootNodeGadgetTypeId )
-		)
+		if( (*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId ) )
 		{
 			static_cast<const Gadget *>( it->get() )->render( style );
 		}
@@ -553,8 +550,7 @@ void GraphGadget::doRender( const Style *style ) const
 	{
 		if(
 			!((*it)->isInstanceOf( ConnectionGadget::staticTypeId() )) &&
-			!((*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId )) &&
-			!((*it)->isInstanceOf( (IECore::TypeId)RootNodeGadgetTypeId ))
+			!((*it)->isInstanceOf( (IECore::TypeId)BackdropNodeGadgetTypeId ))
 		)
 		{
 			static_cast<const Gadget *>( it->get() )->render( style );
@@ -1539,10 +1535,15 @@ ConnectionGadget *GraphGadget::findConnectionGadget( const Gaffer::Plug *plug ) 
 
 void GraphGadget::updateConnectionGadgetMinimisation( ConnectionGadget *gadget )
 {
-	bool minimised = getNodeInputConnectionsMinimised( gadget->dstNodule()->plug()->node() );
+	const Gaffer::Node *dstNode = gadget->dstNodule()->plug()->node();
+	bool minimised = dstNode != m_root ? getNodeInputConnectionsMinimised( dstNode ) : false;
 	if( const Nodule *srcNodule = gadget->srcNodule() )
 	{
-		minimised = minimised || getNodeOutputConnectionsMinimised( srcNodule->plug()->node() );
+		const Gaffer::Node *srcNode = srcNodule->plug()->node();
+		if( srcNode != m_root )
+		{
+			minimised = minimised || getNodeOutputConnectionsMinimised( srcNode );
+		}
 	}
 	gadget->setMinimised( minimised );
 }

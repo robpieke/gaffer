@@ -38,10 +38,16 @@
 
 #include "IECoreGL/Selector.h"
 
+#include "Gaffer/Box.h"
+#include "Gaffer/UndoContext.h"
+#include "Gaffer/ScriptNode.h"
+
 #include "GafferUI/RootNodeGadget.h"
 #include "GafferUI/SpacerGadget.h"
 #include "GafferUI/GraphGadget.h"
+#include "GafferUI/PlugPromoter.h"
 #include "GafferUI/Style.h"
+#include "GafferUI/Nodule.h"
 
 using namespace Imath;
 using namespace IECore;
@@ -50,20 +56,55 @@ using namespace GafferUI;
 IE_CORE_DEFINERUNTIMETYPED( RootNodeGadget );
 
 RootNodeGadget::RootNodeGadget( Gaffer::NodePtr node )
-	:	StandardNodeGadget( node )
+	:	StandardNodeGadget( node ), m_clean( false )
 {
 	setContents( new SpacerGadget( Box3f( V3f( 0 ), V3f( 100 ) ) ) );
+
+//	if( Gaffer::Box *box = runTimeCast<Gaffer::Box>( node.get() ) )
+	{
+/*		static Edge edges[] = { TopEdge, BottomEdge, LeftEdge, RightEdge, InvalidEdge };
+		for( Edge *edge = edges; *edge != InvalidEdge; ++edge )
+		{
+			LinearContainer *c = noduleContainer( *edge );
+			c->removeChild( c->children()[c->children().size()-1] );
+			c->addChild( new PlugPromoter( box ) );
+		}*/
+	}
+}
+
+Imath::V3f RootNodeGadget::noduleTangent( const Nodule *nodule ) const
+{
+	return -StandardNodeGadget::noduleTangent( nodule );
+}
+
+Imath::Box3f RootNodeGadget::bound() const
+{
+	updateBound();
+	return StandardNodeGadget::bound();
 }
 
 void RootNodeGadget::doRender( const Style *style ) const
 {
-	static Edge edges[] = { TopEdge, BottomEdge, LeftEdge, RightEdge, InvalidEdge };
-	for( Edge *edge = edges; *edge != InvalidEdge; ++edge )
+	updateBound();
+
+	/// \todo Share this with the constructor somehow
+	//static Edge edges[] = { TopEdge, BottomEdge, LeftEdge, RightEdge, InvalidEdge };
+
+	/*if( IECoreGL::Selector::currentSelector() )
 	{
-		const Box3f bound3 = noduleContainer( *edge )->transformedBound( this );
-		const Box2f bound2( V2f( bound3.min.x, bound3.min.y ), V2f( bound3.max.x, bound3.max.y ) );
-		style->renderFrame( bound2, 0.5 );
+		for( Edge *edge = edges; *edge != InvalidEdge; ++edge )
+		{
+			const Box3f bound3 = noduleContainer( *edge )->transformedBound( this );
+			const Box2f bound2( V2f( bound3.min.x, bound3.min.y ), V2f( bound3.max.x, bound3.max.y ) );
+			style->renderFrame( bound2, 0.5 );
+		}
 	}
+	else
+	{
+		Box3f b = bound();
+		glColor3f( 0.4, 0.4, 0.4 );
+		style->renderRectangle( Box2f( V2f( b.min.x, b.min.y ), V2f( b.max.x, b.max.y ) ) );
+	}*/
 
 	NodeGadget::doRender( style );
 }
@@ -85,12 +126,23 @@ void RootNodeGadget::parentChanging( Gaffer::GraphComponent *newParent )
 
 void RootNodeGadget::parentRenderRequest( Gaffer::GraphComponent *parent )
 {
-
 	// a parent render request may mean that a node has been moved.
-	// transform ourselves so that we bound all nodes.
+	// we'll need to transform ourselves so that we bound all nodes -
+	// but we'll do it lazily in updateBound().
+	/// \todo If there was a boundChangedSignal() we could do this far less
+	/// often, and the LinearContainer could do less recomputation too.
+	m_clean = false;
+}
+
+void RootNodeGadget::updateBound() const
+{
+	if( m_clean )
+	{
+		return;
+	}
 
 	Box3f b;
-	for( NodeGadgetIterator it( parent ); it != it.end(); ++it )
+	for( NodeGadgetIterator it( parent<Gadget>() ); it != it.end(); ++it )
 	{
 		if( *it == this )
 		{
@@ -108,11 +160,12 @@ void RootNodeGadget::parentRenderRequest( Gaffer::GraphComponent *parent )
 	b.min -= padding;
 	b.max += padding;
 
-	SpacerGadget *spacer = static_cast<SpacerGadget *>( getContents() );
+	SpacerGadget *spacer = static_cast<SpacerGadget *>( const_cast<Gadget *>( getContents() ) );
 	spacer->setSize( b );
 
 	M44f transform;
 	transform.translate( b.center() );
-	setTransform( transform );
+	const_cast<RootNodeGadget *>( this )->setTransform( transform );
 
+	m_clean = true;
 }

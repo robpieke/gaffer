@@ -2375,5 +2375,12 @@
 	 id="rect4100"
 	 style="opacity:0.35344831;fill:none;stroke:none" />
     </g>
+    <path
+       sodipodi:nodetypes="ccccccccccccc"
+       style="fill:#787878;fill-opacity:1;fill-rule:nonzero;stroke:#0d0d0d;stroke-width:7.30239248;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 94.645331,256.81042 0,25.19709 -25.197092,0 0,20.15758 25.197092,0 0,25.19709 20.157579,0 0,-25.19709 25.19709,0 0,-20.15758 -25.19709,0 0,-25.19709 -20.157579,0 z"
+       id="forExport:plugPromoter"
+       inkscape:connector-curvature="0"
+       inkscape:label="#path3607" />
   </g>
 </svg>
