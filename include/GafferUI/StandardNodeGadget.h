@@ -116,10 +116,6 @@ class StandardNodeGadget : public NodeGadget
 		LinearContainer *noduleContainer( Edge edge );
 		const LinearContainer *noduleContainer( Edge edge ) const;
 
-	private :
-
-		NodulePtr addNodule( Gaffer::PlugPtr plug );
-
 		IndividualContainer *contentsContainer();
 		const IndividualContainer *contentsContainer() const;
 
