@@ -90,21 +90,21 @@ void RootNodeGadget::doRender( const Style *style ) const
 	/// \todo Share this with the constructor somehow
 	//static Edge edges[] = { TopEdge, BottomEdge, LeftEdge, RightEdge, InvalidEdge };
 
-	/*if( IECoreGL::Selector::currentSelector() )
+	if( IECoreGL::Selector::currentSelector() )
 	{
-		for( Edge *edge = edges; *edge != InvalidEdge; ++edge )
+		/*for( Edge *edge = edges; *edge != InvalidEdge; ++edge )
 		{
 			const Box3f bound3 = noduleContainer( *edge )->transformedBound( this );
 			const Box2f bound2( V2f( bound3.min.x, bound3.min.y ), V2f( bound3.max.x, bound3.max.y ) );
 			style->renderFrame( bound2, 0.5 );
-		}
+		}*/
 	}
 	else
 	{
 		Box3f b = bound();
 		glColor3f( 0.4, 0.4, 0.4 );
 		style->renderRectangle( Box2f( V2f( b.min.x, b.min.y ), V2f( b.max.x, b.max.y ) ) );
-	}*/
+	}
 
 	NodeGadget::doRender( style );
 }
