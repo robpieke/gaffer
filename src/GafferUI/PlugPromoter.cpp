@@ -49,6 +49,7 @@
 
 using namespace Imath;
 using namespace IECore;
+using namespace Gaffer;
 using namespace GafferUI;
 
 IE_CORE_DEFINERUNTIMETYPED( PlugPromoter );
@@ -70,11 +71,19 @@ Imath::Box3f PlugPromoter::bound() const
 	return Box3f( V3f( -0.5f, -0.5f, 0.0f ), V3f( 0.5f, 0.5f, 0.0f ) );
 }
 
-static IECoreGL::Texture *texture()
+/*static IECoreGL::Texture *texture()
 {
-	static IECoreGL::TexturePtr t = ImageGadget::textureLoader()->load( "plugPromoter.png" );
+	static IECoreGL::TexturePtr t = NULL;
+	if( !t )
+	{
+		t = ImageGadget::textureLoader()->load( "plugPromoter.png" );
+		IECoreGL::Texture::ScopedBinding binding( *t );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST );
+		glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+		//glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_LOD_BIAS, -1.25 );
+	}
 	return t.get();
-}
+}*/
 
 void PlugPromoter::doRender( const Style *style ) const
 {
@@ -85,26 +94,45 @@ void PlugPromoter::doRender( const Style *style ) const
 		state = Style::HighlightedState;
 		radius = 1.0f;
 	}
-	//style->renderNodule( radius, state );
-	style->renderImage( Box2f( V2f( -radius ), V2f( radius ) ), texture() );
+	style->renderNodule( radius, state );
+	//style->renderImage( Box2f( V2f( -radius ), V2f( radius ) ), texture() );
 }
 
 bool PlugPromoter::dragEnter( const DragDropEvent &event )
 {
 	const Plug *plug = runTimeCast<Plug>( event.data.get() );
-	if( !m_box->canPromotePlug( plug, /* asUserPlug = */ false ) )
+	if( !plug )
 	{
 		return false;
 	}
 
+	Nodule *sourceNodule = runTimeCast<Nodule>( event.sourceGadget.get() );
+	if( !sourceNodule )
+	{
+		return false;
+	}
+
+	const Node *node = plug->node();
+	if( node->parent<Node>() == m_box )
+	{
+		if( !m_box->canPromotePlug( plug, /* asUserPlug = */ false ) )
+		{
+			return false;
+		}
+	}
+	else
+	{
+		if( node->parent<Node>() != m_box->parent<Node>() )
+		{
+			return false;
+		}
+	}
+
 	setHighlighted( true );
 
-	if( Nodule *sourceNodule = runTimeCast<Nodule>( event.sourceGadget.get() ) )
-	{
-		V3f center = V3f( 0.0f ) * fullTransform();
-		center = center * sourceNodule->fullTransform().inverse();
-		sourceNodule->updateDragEndPoint( center, V3f( 0, -1, 0 ) );
-	}
+	V3f center = V3f( 0.0f ) * fullTransform();
+	center = center * sourceNodule->fullTransform().inverse();
+	sourceNodule->updateDragEndPoint( center, V3f( 0, -1, 0 ) );
 
 	return true;
 }
@@ -119,10 +147,26 @@ bool PlugPromoter::drop( const DragDropEvent &event )
 {
 	setHighlighted( false );
 
-	Gaffer::Plug *plug = static_cast<Gaffer::Plug *>( event.data.get() );
-	Gaffer::UndoContext undoEnabler( plug->ancestor<Gaffer::ScriptNode>() );
+	Plug *plug = static_cast<Plug *>( event.data.get() );
+	UndoContext undoEnabler( plug->ancestor<ScriptNode>() );
 
-	m_box->promotePlug( plug, /* asUserPlug = */ false );
+	if( m_box->isAncestorOf( plug ) )
+	{
+		m_box->promotePlug( plug, /* asUserPlug = */ false );
+	}
+	else
+	{
+		PlugPtr boxPlug = plug->createCounterpart( plug->getName(), plug->direction() == Plug::In ? Plug::Out : Plug::In );
+		m_box->addChild( boxPlug );
+		if( boxPlug->direction() == Plug::In )
+		{
+			boxPlug->setInput( plug );
+		}
+		else
+		{
+			plug->setInput( boxPlug );
+		}
+	}
 
 	return true;
 }
