@@ -35,11 +35,15 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
+#include "tbb/parallel_reduce.h"
+#include "tbb/blocked_range.h"
+
 #include "Gaffer/Context.h"
 
 #include "GafferScene/SceneNode.h"
 
 using namespace std;
+using namespace tbb;
 using namespace Imath;
 using namespace IECore;
 using namespace GafferScene;
@@ -300,6 +304,61 @@ IECore::ConstCompoundObjectPtr SceneNode::computeGlobals( const Gaffer::Context 
 	throw IECore::NotImplementedException( string( typeName() ) + "::computeGlobals" );
 }
 
+namespace
+{
+
+struct BoundHash
+{
+
+	BoundHash( const ScenePlug::ScenePath &path, const vector<InternedString> &childNames, const ScenePlug *scene, const Context *context )
+		:	m_path( path ), m_childNames( childNames ), m_scene( scene ), m_context( context )
+	{
+	}
+
+	BoundHash( const BoundHash &rhs, split )
+		:	m_path( rhs.m_path ), m_childNames( rhs.m_childNames ), m_scene( rhs.m_scene ), m_context( rhs.m_context ), m_hash()
+	{
+	}
+	
+	void operator() ( const blocked_range<size_t> &r )
+	{
+		ContextPtr context = new Context( *m_context, Context::Borrowed );
+		Context::Scope scopedContext( context.get() );
+
+		ScenePlug::ScenePath childPath( m_path );
+		childPath.push_back( InternedString() ); // room for the child name
+
+		for( size_t i=r.begin(); i!=r.end(); ++i )
+		{
+			childPath.back() = m_childNames[i];
+			context->set( ScenePlug::scenePathContextName, childPath );
+			m_scene->boundPlug()->hash( m_hash );
+			m_scene->transformPlug()->hash( m_hash );
+		}
+	}
+
+	void join( const BoundHash &rhs )
+	{
+		m_hash.append( rhs.m_hash );
+	}
+		
+	const MurmurHash &result()
+	{
+		return m_hash;
+	}
+
+	private :
+	
+		const ScenePlug::ScenePath &m_path;
+		const vector<InternedString> &m_childNames;
+		const ScenePlug *m_scene;
+		const Context *m_context;
+		MurmurHash m_hash;
+
+};
+
+} // namespace
+
 IECore::MurmurHash SceneNode::hashOfTransformedChildBounds( const ScenePath &path, const ScenePlug *out ) const
 {
 	IECore::MurmurHash result;
@@ -307,14 +366,12 @@ IECore::MurmurHash SceneNode::hashOfTransformedChildBounds( const ScenePath &pat
 	const vector<InternedString> &childNames = childNamesData->readable();
 	if( childNames.size() )
 	{
-		ScenePath childPath( path );
-		childPath.push_back( InternedString() ); // room for the child name
-		for( vector<InternedString>::const_iterator it = childNames.begin(); it != childNames.end(); it++ )
-		{
-			childPath[path.size()] = *it;
-			result.append( out->boundHash( childPath ) );
-			result.append( out->transformHash( childPath ) );
-		}
+		BoundHash hasher( path, childNames, out, Context::current() );
+		parallel_deterministic_reduce(
+			blocked_range<size_t>( 0, childNames.size(), 10 ),
+			hasher
+		);
+		result = hasher.result();
 	}
 	else
 	{
@@ -324,20 +381,72 @@ IECore::MurmurHash SceneNode::hashOfTransformedChildBounds( const ScenePath &pat
 	return result;
 }
 
+namespace
+{
+
+struct BoundUnion
+{
+
+	BoundUnion( const ScenePlug::ScenePath &path, const vector<InternedString> &childNames, const ScenePlug *scene, const Context *context )
+		:	m_path( path ), m_childNames( childNames ), m_scene( scene ), m_context( context )
+	{
+	}
+
+	BoundUnion( const BoundUnion &rhs, split )
+		:	m_path( rhs.m_path ), m_childNames( rhs.m_childNames ), m_scene( rhs.m_scene ), m_context( rhs.m_context )
+	{
+	}
+	
+	void operator() ( const blocked_range<size_t> &r )
+	{
+		ContextPtr context = new Context( *m_context, Context::Borrowed );
+		Context::Scope scopedContext( context.get() );
+
+		ScenePlug::ScenePath childPath( m_path );
+		childPath.push_back( InternedString() ); // room for the child name
+
+		for( size_t i=r.begin(); i!=r.end(); ++i )
+		{
+			childPath.back() = m_childNames[i];
+			context->set( ScenePlug::scenePathContextName, childPath );
+			Box3f childBound = m_scene->boundPlug()->getValue();
+			childBound = transform( childBound, m_scene->transformPlug()->getValue() );
+			m_union.extendBy( childBound );
+		}
+	}
+
+	void join( const BoundUnion &rhs )
+	{
+		m_union.extendBy( rhs.m_union );
+	}
+		
+	const Box3f &result()
+	{
+		return m_union;
+	}
+
+	private :
+	
+		const ScenePlug::ScenePath &m_path;
+		const vector<InternedString> &m_childNames;
+		const ScenePlug *m_scene;
+		const Context *m_context;
+		Box3f m_union;
+
+};
+
+} // namespace
+
 Imath::Box3f SceneNode::unionOfTransformedChildBounds( const ScenePath &path, const ScenePlug *out ) const
 {
-	Box3f result;
 	ConstInternedStringVectorDataPtr childNamesData = out->childNames( path );
 	const vector<InternedString> &childNames = childNamesData->readable();
 
-	ScenePath childPath( path );
-	childPath.push_back( InternedString() ); // room for the child name
-	for( vector<InternedString>::const_iterator it = childNames.begin(); it != childNames.end(); it++ )
-	{
-		childPath[path.size()] = *it;
-		Box3f childBound = out->bound( childPath );
-		childBound = transform( childBound, out->transform( childPath ) );
-		result.extendBy( childBound );
-	}
-	return result;
+	BoundUnion unioner( path, childNames, out, Context::current() );
+	parallel_reduce(
+		blocked_range<size_t>( 0, childNames.size() ),
+		unioner
+	);
+	
+	return unioner.result();
 }
