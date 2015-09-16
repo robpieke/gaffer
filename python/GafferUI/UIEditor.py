@@ -1157,6 +1157,78 @@ class _PlugListing( GafferUI.Widget ) :
 			self.__updateMetadata()
 
 ##########################################################################
+# _DefaultAndRangeEditor.
+##########################################################################
+
+class _DefaultAndRangeEditor( GafferUI.Widget ) :
+
+	def __init__( self, **kw ) :
+
+		column = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, spacing = 4 )
+		GafferUI.Widget.__init__( self, column, **kw )
+
+		with column :
+
+			with _Row() as self.__defaultRow :
+				_Label( "Default" )
+				self.__defaultPlaceholder = GafferUI.TextWidget()
+
+			with _Row() as self.__minRow :
+				_Label( "Min" )
+				self.__minPlaceholder = GafferUI.TextWidget()
+
+			with _Row() as self.__maxRow :
+				_Label( "Max" )
+				self.__maxPlaceholder = GafferUI.TextWidget()
+
+		# We make a UI for editing values by copying the plug
+		# onto this node and then making PlugValueWidgets for it.
+		self.__valueNode = Gaffer.Node( "PlugEditor" )
+		self.__plugSetConnection = self.__valueNode.plugSetSignal().connect( Gaffer.WeakMethod( self.__plugSet ) )
+
+	def setPlug( self, plug ) :
+
+		self.__plug = plug
+
+		if self.__plug is not None :
+			self.__valueNode["defaultValue"] = plug.createCounterpart( "defaultValue", plug.Direction.In )
+			self.__valueNode["minValue"] = plug.createCounterpart( "minValue", plug.Direction.In )
+			self.__valueNode["maxValue"] = plug.createCounterpart( "maxValue", plug.Direction.In )
+
+		if self.__plug is not None and hasattr( self.__plug, "defaultValue" ) :
+			self.__defaultRow[1] = GafferUI.PlugValueWidget.create( self.__valueNode["defaultValue"] )
+			self.__defaultRow.setEnabled( True )
+			with Gaffer.BlockedConnection( self.__plugSetConnection ) :
+				self.__valueNode["defaultValue"].setValue( self.__plug.defaultValue() )
+		else :
+			self.__defaultRow[1] = self.__defaultPlaceholder
+			self.__defaultRow.setEnabled( False )
+
+		if self.__plug is not None and hasattr( self.__plug, "minValue" ) and hasattr( self.__plug, "maxValue" ) :
+			self.__minRow[1] = GafferUI.PlugValueWidget.create( self.__valueNode["minValue"] )
+			self.__maxRow[1] = GafferUI.PlugValueWidget.create( self.__valueNode["maxValue"] )
+			self.__minRow.setEnabled( True )
+			self.__maxRow.setEnabled( True )
+			with Gaffer.BlockedConnection( self.__plugSetConnection ) :
+				self.__valueNode["minValue"].setValue( self.__plug.minValue() )
+				self.__valueNode["maxValue"].setValue( self.__plug.maxValue() )
+		else :
+			self.__minRow[1] = self.__minPlaceholder
+			self.__maxRow[1] = self.__maxPlaceholder
+			self.__minRow.setEnabled( False )
+			self.__maxRow.setEnabled( False )
+
+	def getPlug( self ) :
+
+		return self.__plug
+
+	def __plugSet( self, plug ) :
+
+		r = repr( self.__plug )
+		print r
+		newPlug = eval( r )
+
+##########################################################################
 # _PresetsEditor. This provides a ui for editing the presets for a plug.
 ##########################################################################
 
@@ -1429,6 +1501,10 @@ class _PlugEditor( GafferUI.Widget ) :
 					menu = GafferUI.Menu( Gaffer.WeakMethod( self.__widgetMenuDefinition ) )
 				)
 
+			with GafferUI.Collapsible( "Default and Range", collapsed = True ) :
+
+				self.__defaultAndRangeEditor = _DefaultAndRangeEditor()
+
 			with GafferUI.Collapsible( "Presets", collapsed = True ) :
 
 				with _Row() :
@@ -1503,6 +1579,7 @@ class _PlugEditor( GafferUI.Widget ) :
 		self.__updateWidgetMenuText()
 		self.__updateWidgetSettings()
 		self.__updateGadgetMenuText()
+		self.__defaultAndRangeEditor.setPlug( plug )
 		self.__presetsEditor.setPlug( plug )
 		self.__nodeGraphSection.setEnabled( self.__plug is not None and self.__plug.parent().isSame( self.__plug.node() ) )
 
