@@ -1639,10 +1639,10 @@ class _PlugEditor( GafferUI.Widget ) :
 		__MetadataDefinition( "pathPlugValueWidget:bookmarks", "Bookmarks Category", _StringMetadataWidget, "GafferUI.FileSystemPathPlugValueWidget" ),
 		__MetadataDefinition( "pathPlugValueWidget:valid", "File Must Exist", _BoolMetadataWidget, "GafferUI.FileSystemPathPlugValueWidget" ),
 		__MetadataDefinition( "pathPlugValueWidget:leaf", "No Directories", _BoolMetadataWidget, "GafferUI.FileSystemPathPlugValueWidget" ),
-		__MetadataDefinition( "fileSystemPathPlugValueWidget:includeSequences", "Allow sequences", _BoolMetadataWidget, "GafferUI.FileSystemPathPlugValueWidget" ),
+		__MetadataDefinition( "fileSystemPathPlugValueWidget:includeSequences", "Allow Sequences", _BoolMetadataWidget, "GafferUI.FileSystemPathPlugValueWidget" ),
 		# Note that includeSequenceFrameRange is primarily used by GafferCortex.
 		# Think twice before using it elsewhere	as it may not exist in the future.
-		__MetadataDefinition( "fileSystemPathPlugValueWidget:includeSequenceFrameRange", "Sequences include frame range", _BoolMetadataWidget, "GafferUI.FileSystemPathPlugValueWidget" ),
+		__MetadataDefinition( "fileSystemPathPlugValueWidget:includeSequenceFrameRange", "Include Frame Range", _BoolMetadataWidget, "GafferUI.FileSystemPathPlugValueWidget" ),
 	)
 
 	__GadgetDefinition = collections.namedtuple( "GadgetDefinition", ( "label", "plugType", "metadata" ) )
