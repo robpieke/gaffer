@@ -60,14 +60,10 @@ class Reference : public SubGraph
 		void load( const std::string &fileName );
 		/// Returns the name of the script currently being referenced.
 		const std::string &fileName() const;
-
+		
 		typedef boost::signal<void ( Reference * )> ReferenceLoadedSignal;
 		/// Emitted when a reference is loaded (or unloaded following an undo).
 		ReferenceLoadedSignal &referenceLoadedSignal();
-
-		bool hasEdit( const Plug *plug ) const;
-		/// \undoable
-		void removeEdit( Plug *plug );
 
 	private :
 
@@ -76,9 +72,6 @@ class Reference : public SubGraph
 
 		std::string m_fileName;
 		ReferenceLoadedSignal m_referenceLoadedSignal;
-
-		class Edits;
-		boost::shared_ptr<Edits> m_edits;
 
 };
 
