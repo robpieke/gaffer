@@ -93,6 +93,7 @@ void GafferBindings::bindReference()
 		.def( "load", &Reference::load )
 		.def( "fileName", &Reference::fileName, return_value_policy<copy_const_reference>() )
 		.def( "referenceLoadedSignal", &Reference::referenceLoadedSignal, return_internal_reference<1>() )
+		.def( "hasEdit", &Reference::hasEdit )
 	;
 
 	SignalClass<Reference::ReferenceLoadedSignal, DefaultSignalCaller<Reference::ReferenceLoadedSignal>, ReferenceLoadedSlotCaller >( "ReferenceLoadedSignal" );

@@ -36,6 +36,7 @@
 
 #include "boost/algorithm/string/predicate.hpp"
 #include "boost/bind.hpp"
+#include "boost/lambda/lambda.hpp"
 
 #include "IECore/Exception.h"
 #include "IECore/MessageHandler.h"
@@ -49,10 +50,113 @@
 using namespace IECore;
 using namespace Gaffer;
 
+//////////////////////////////////////////////////////////////////////////
+// Edits. This internal utility class is used to track where edits have
+// been applied to plugs following loading.
+//////////////////////////////////////////////////////////////////////////
+
+class Reference::Edits : public boost::signals::trackable
+{
+
+	public :
+
+		Edits( Reference *reference )
+			:	m_reference( reference )
+		{
+			m_reference->plugSetSignal().connect( boost::bind( &Edits::plugSet, this, ::_1 ) );
+		}
+
+		bool hasEdit( const Plug *plug ) const
+		{
+			const PlugEdit *edit = plugEdit( plug );
+			return edit ? edit->valueSet : false;
+		}
+
+	private :
+
+		Reference *m_reference;
+
+		struct PlugEdit
+		{
+			PlugEdit()
+				:	valueSet( false )
+			{
+			}
+			bool valueSet;
+		};
+
+		typedef std::map<std::string, PlugEdit> PlugEdits;
+		PlugEdits m_plugEdits;
+
+		const PlugEdit *plugEdit( const Plug *plug ) const
+		{
+			// Cheeky cast better than maintaining two near-identical functions.
+			return const_cast<Edits *>( this )->plugEdit( plug, /* createIfMissing = */ false );
+		}
+
+		PlugEdit *plugEdit( const Plug *plug, bool createIfMissing )
+		{
+			if( !m_reference->isReferencePlug( plug ) )
+			{
+				return NULL;
+			}
+
+			const std::string relativeName = plug->relativeName( m_reference );
+			PlugEdits::iterator it = m_plugEdits.find( relativeName );
+			if( it != m_plugEdits.end() )
+			{
+				return &(it->second);
+			}
+
+			if( !createIfMissing )
+			{
+				return NULL;
+			}
+
+			return &m_plugEdits[relativeName];
+		}
+
+		void plugSet( Plug *plug )
+		{
+			ScriptNode *scriptNode = m_reference->ancestor<ScriptNode>();
+			if( scriptNode && ( scriptNode->currentActionStage() == Action::Undo || scriptNode->currentActionStage() == Action::Redo ) )
+			{
+				// Our edit tracking code below utilises the undo system, so we don't need
+				// to do anything for an Undo or Redo - our action from the original Do will
+				// be replayed automatically.
+				return;
+			}
+
+			PlugEdit *edit = plugEdit( plug, /* createIfMissing = */ true );
+			if( !edit )
+			{
+				// May get a NULL edit even with createIfMissing = true,
+				// if the plug is not a reference plug.
+				return;
+			}
+
+			if( edit->valueSet )
+			{
+				return;
+			}
+
+			Action::enact(
+				m_reference,
+				boost::lambda::var( edit->valueSet ) = true,
+				boost::lambda::var( edit->valueSet ) = false
+			);
+		}
+
+};
+
+//////////////////////////////////////////////////////////////////////////
+// Reference
+//////////////////////////////////////////////////////////////////////////
+
 IE_CORE_DEFINERUNTIMETYPED( Reference );
 
 Reference::Reference( const std::string &name )
-	:	SubGraph( name )
+	:	SubGraph( name ), m_edits( new Edits( this ) )
 {
 }
 
@@ -173,7 +277,7 @@ void Reference::loadInternal( const std::string &fileName )
 						ValuePlug *newValuePlug = runTimeCast<ValuePlug>( newPlug );
 						if( oldValuePlug && newValuePlug )
 						{
-							if( versionPriorTo09 || !oldValuePlug->isSetToDefault() )
+							if( versionPriorTo09 || m_edits->hasEdit( newPlug ) )
 							{
 								newValuePlug->setFrom( oldValuePlug );
 							}
@@ -225,6 +329,11 @@ void Reference::loadInternal( const std::string &fileName )
 		throw Exception( boost::str( boost::format( "Error loading reference \"%s\"" ) % fileName ) );
 	}
 
+}
+
+bool Reference::hasEdit( const Plug *plug ) const
+{
+	return m_edits->hasEdit( plug );
 }
 
 bool Reference::isReferencePlug( const Plug *plug ) const
