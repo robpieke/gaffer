@@ -254,6 +254,28 @@ class ReferenceTest( GafferTest.TestCase ) :
 
 		self.assertEqual( len( s["r"]["user"] ), 0 )
 
+	def testLoadKeepsUserPlugs( self ) :
+
+		s = Gaffer.ScriptNode()
+
+		s["b"] = Gaffer.Box()
+		s["b"].exportForReference( self.temporaryDirectory() + "/test.grf" )
+
+		s["r"] = Gaffer.Reference()
+		s["r"]["user"]["p"] = Gaffer.IntPlug( flags = Gaffer.Plug.Flags.Default | Gaffer.Plug.Flags.Dynamic )
+		self.assertEqual( s["r"]["user"]["p"].getFlags(), Gaffer.Plug.Flags.Default | Gaffer.Plug.Flags.Dynamic )
+
+		s["r"].load( self.temporaryDirectory() + "/test.grf" )
+		self.assertTrue( "p" in s["r"]["user"] )
+		self.assertEqual( s["r"]["user"]["p"].getFlags(), Gaffer.Plug.Flags.Default | Gaffer.Plug.Flags.Dynamic )
+
+		s["fileName"].setValue( self.temporaryDirectory() + "/test.gfr" )
+		s.save()
+
+		s2 = Gaffer.ScriptNode()
+		s2.execute( s.serialise() )
+		self.assertTrue( "p" in s2["r"]["user"] )
+
 	def testPlugMetadata( self ) :
 
 		s = Gaffer.ScriptNode()
