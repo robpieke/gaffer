@@ -72,6 +72,17 @@ class Reference::Edits : public boost::signals::trackable
 			return edit ? edit->valueSet : false;
 		}
 
+		void clearInvalidEdits()
+		{
+			for( PlugEdits::iterator it = m_plugEdits.begin(), eIt = m_plugEdits.end(); it != eIt; ++it )
+			{
+				if( !m_reference->descendant<Plug>( it->first ) )
+				{
+					it->second = PlugEdit();
+				}
+			}
+		}
+
 	private :
 
 		Reference *m_reference;
@@ -320,6 +331,8 @@ void Reference::loadInternal( const std::string &fileName )
 			(*it)->setFlags( Plug::Dynamic, false );
 		}
 	}
+
+	m_edits->clearInvalidEdits();
 
 	m_fileName = fileName;
 	referenceLoadedSignal()( this );

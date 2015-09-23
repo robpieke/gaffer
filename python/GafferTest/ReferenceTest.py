@@ -1066,6 +1066,29 @@ class ReferenceTest( GafferTest.TestCase ) :
 		self.assertFalse( s.undoAvailable() )
 		self.assertEqual( s["r"]["p"].getValue(), 0 )
 
+	def testEditsRemovedWhenPlugsDeleted( self ) :
+
+		s = Gaffer.ScriptNode()
+		s["b"] = Gaffer.Box()
+		s["b"].exportForReference( self.temporaryDirectory() + "/withoutPlug.grf" )
+
+		s["b"]["p"] = Gaffer.IntPlug( flags = Gaffer.Plug.Flags.Default | Gaffer.Plug.Flags.Dynamic )
+		s["b"].exportForReference( self.temporaryDirectory() + "/withPlug.grf" )
+
+		s["r"] = Gaffer.Reference()
+		s["r"].load( self.temporaryDirectory() + "/withPlug.grf" )
+		self.assertFalse( s["r"].hasEdit( s["r"]["p"] ) )
+
+		s["r"]["p"].setValue( 10 )
+		self.assertEqual( s["r"]["p"].getValue(), 10 )
+		self.assertTrue( s["r"].hasEdit( s["r"]["p"] ) )
+
+		s["r"].load( self.temporaryDirectory() + "/withoutPlug.grf" )
+		s["r"].load( self.temporaryDirectory() + "/withPlug.grf" )
+
+		self.assertEqual( s["r"]["p"].getValue(), 0 )
+		self.assertFalse( s["r"].hasEdit( s["r"]["p"] ) )
+
 	def tearDown( self ) :
 
 		GafferTest.TestCase.tearDown( self )
