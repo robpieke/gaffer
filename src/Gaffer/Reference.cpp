@@ -110,13 +110,6 @@ void Reference::loadInternal( const std::string &fileName )
 		}
 	}
 
-	for( PlugIterator it( userPlug() ); it != it.end(); ++it )
-	{
-		Plug *plug = it->get();
-		previousPlugs[plug->relativeName( this )] = plug;
-		plug->setName( "__tmp__" + plug->getName().string() );
-	}
-
 	// if we're doing a reload, then we also need to delete all our child
 	// nodes to make way for the incoming nodes.
 
@@ -236,39 +229,34 @@ void Reference::loadInternal( const std::string &fileName )
 
 bool Reference::isReferencePlug( const Plug *plug ) const
 {
-	// If a plug is the descendant of a plug starting with
-	// __, and that plug is a direct child of the reference,
-	// assume that it is for gaffer's internal use, so would
-	// never come directly from a reference. This lines up
-	// with the export code in Box::exportForReference(), where
-	// such plugs are excluded from the export.
-	
-	// find ancestor of p which is a direct child of this node:
-	const Plug* ancestorPlug = plug;
-	const GraphComponent* parent = plug->parent<GraphComponent>();
-	while( parent != this )
+	// Find ancestor of plug which is a direct child of this node.
+	while( plug->parent<GraphComponent>() != this )
 	{
-		ancestorPlug = runTimeCast< const Plug >( parent );
-		if( !ancestorPlug )
+		plug = plug->parent<Plug>();
+		if( !plug )
 		{
-			// Looks like the plug we're looking for doesn't exist,
-			// so we exit the loop.
-			break;
+			// Plug doesn't belong to this node.
+			return false;
 		}
-		parent = ancestorPlug->parent<GraphComponent>();
 	}
-	
-	if( ancestorPlug && boost::starts_with( ancestorPlug->getName().c_str(), "__" ) )
+
+	// If the plug name starts with __, assume that it is for
+	// gaffer's internal use, so would never come directly
+	// from a reference. This lines up with the export code
+	// in Box::exportForReference(), where such plugs are
+	// excluded from the export.
+	if( boost::starts_with( plug->getName().c_str(), "__" ) )
 	{
 		return false;
 	}
-	
-	// we know this doesn't come from a reference,
-	// because it's made during construction.
+
+	// User plugs are the user's domain - Boxes do not
+	// export them, so they will not be referenced.
 	if( plug == userPlug() )
 	{
 		return false;
 	}
-	// everything else must be from a reference then.
+
+	// Everything else must be from a reference then.
 	return true;
 }
