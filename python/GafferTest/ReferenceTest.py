@@ -1089,6 +1089,44 @@ class ReferenceTest( GafferTest.TestCase ) :
 		self.assertEqual( s["r"]["p"].getValue(), 0 )
 		self.assertFalse( s["r"].hasEdit( s["r"]["p"] ) )
 
+	def testRemoveEdit( self ) :
+
+		s = Gaffer.ScriptNode()
+		s["b"] = Gaffer.Box()
+		s["b"]["p"] = Gaffer.IntPlug( flags = Gaffer.Plug.Flags.Default | Gaffer.Plug.Flags.Dynamic )
+		s["b"].exportForReference( self.temporaryDirectory() + "/test.grf" )
+
+		s["r"] = Gaffer.Reference()
+		s["r"].load( self.temporaryDirectory() + "/test.grf" )
+		self.assertFalse( s["r"].hasEdit( s["r"]["p"] ) )
+		self.assertEqual( s["r"]["p"].getValue(), 0 )
+
+		with Gaffer.UndoContext( s ) :
+			s["r"]["p"].setValue( 1 )
+			self.assertTrue( s["r"].hasEdit( s["r"]["p"] ) )
+			self.assertEqual( s["r"]["p"].getValue(), 1 )
+
+		with Gaffer.UndoContext( s ) :
+			s["r"].removeEdit( s["r"]["p"] )
+			self.assertFalse( s["r"].hasEdit( s["r"]["p"] ) )
+			self.assertEqual( s["r"]["p"].getValue(), 0 )
+
+		s.undo()
+		self.assertTrue( s["r"].hasEdit( s["r"]["p"] ) )
+		self.assertEqual( s["r"]["p"].getValue(), 1 )
+
+		s.undo()
+		self.assertFalse( s["r"].hasEdit( s["r"]["p"] ) )
+		self.assertEqual( s["r"]["p"].getValue(), 0 )
+
+		s.redo()
+		self.assertTrue( s["r"].hasEdit( s["r"]["p"] ) )
+		self.assertEqual( s["r"]["p"].getValue(), 1 )
+
+		s.redo()
+		self.assertFalse( s["r"].hasEdit( s["r"]["p"] ) )
+		self.assertEqual( s["r"]["p"].getValue(), 0 )
+
 	def tearDown( self ) :
 
 		GafferTest.TestCase.tearDown( self )

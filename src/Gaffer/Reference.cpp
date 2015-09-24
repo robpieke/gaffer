@@ -72,6 +72,13 @@ class Reference::Edits : public boost::signals::trackable
 			return edit ? edit->valueSet : false;
 		}
 
+		/// DO WE REALLY WANT THIS HERE OR SHOULD EDITS JUST BE
+		/// ABOUT STATE TRACKING AND WE DO ALL THE REST IN REFERENCE????
+		void removeEdit( Plug *plug )
+		{
+
+		}
+
 		void clearInvalidEdits()
 		{
 			for( PlugEdits::iterator it = m_plugEdits.begin(), eIt = m_plugEdits.end(); it != eIt; ++it )
@@ -347,6 +354,11 @@ void Reference::loadInternal( const std::string &fileName )
 bool Reference::hasEdit( const Plug *plug ) const
 {
 	return m_edits->hasEdit( plug );
+}
+
+void Reference::removeEdit( Plug *plug )
+{
+
 }
 
 bool Reference::isReferencePlug( const Plug *plug ) const

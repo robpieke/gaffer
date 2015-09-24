@@ -66,6 +66,8 @@ class Reference : public SubGraph
 		ReferenceLoadedSignal &referenceLoadedSignal();
 
 		bool hasEdit( const Plug *plug ) const;
+		/// \undoable
+		void removeEdit( Plug *plug );
 
 	private :
 
