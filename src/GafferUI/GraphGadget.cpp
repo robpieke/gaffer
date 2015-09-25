@@ -745,6 +745,7 @@ void GraphGadget::inputChanged( Gaffer::Plug *dstPlug )
 		return;
 	}
 
+	/// MOVE THESE CHECKS INTO addConnectionGadget()????
 	if( dstPlug->direction() == Gaffer::Plug::Out )
 	{
 		// it's an internal connection - no need to
@@ -776,6 +777,20 @@ void GraphGadget::plugSet( Gaffer::Plug *plug )
 			updateConnectionGadgetMinimisation( *it );
 		}
 	}
+}
+
+void GraphGadget::noduleAdded( Nodule *nodule )
+{
+	// NEED TO CHECK FOR NOT ADDING INPUT CONNECTIONS!
+	// NEED TO CHECK FOR DANGLING INPUTS AS WELL!
+	addConnectionGadget( nodule->plug() );
+}
+
+void GraphGadget::noduleRemoved( Nodule *nodule )
+{
+	// NEED TO MAKE OUTPUTS DANGLE!!!
+	// IT FEELS LIKE WE SHOULD JUST HAVE A SINGLE METHOD TO DO ALL THIS??
+	removeConnectionGadget( nodule->plug() );
 }
 
 bool GraphGadget::buttonRelease( GadgetPtr gadget, const ButtonEvent &event )
@@ -1392,6 +1407,8 @@ NodeGadget *GraphGadget::addNodeGadget( Gaffer::Node *node )
 	NodeGadgetEntry &nodeGadgetEntry = m_nodeGadgets[node];
 	nodeGadgetEntry.inputChangedConnection = node->plugInputChangedSignal().connect( boost::bind( &GraphGadget::inputChanged, this, ::_1 ) );
 	nodeGadgetEntry.plugSetConnection = node->plugSetSignal().connect( boost::bind( &GraphGadget::plugSet, this, ::_1 ) );
+	nodeGadgetEntry.noduleAddedConnection = nodeGadget->noduleAddedSignal().connect( boost::bind( &GraphGadget::noduleAdded, this, ::_2 ) );
+	nodeGadgetEntry.noduleRemovedConnection = nodeGadget->noduleRemovedSignal().connect( boost::bind( &GraphGadget::noduleRemoved, this, ::_2 ) );
 	nodeGadgetEntry.gadget = nodeGadget.get();
 
 	// highlight to reflect selection status
