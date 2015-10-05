@@ -685,6 +685,14 @@ libraries = {
 
 	"GafferTractorUITest" : {},
 
+	"GafferVDB" : {
+		"envAppends" : {
+			"LIBS" : [ "Gaffer", "GafferScene", "openvdb" ],
+		},
+	},
+
+	"GafferVDBTest" : {},
+
 	"apps" : {
 		"additionalFiles" : glob.glob( "apps/*/*-1.py" ),
 	},

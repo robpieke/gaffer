@@ -1,7 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 //
-//  Copyright (c) 2012, John Haddon. All rights reserved.
-//  Copyright (c) 2013, Image Engine Design Inc. All rights reserved.
+//  Copyright (c) 2015, John Haddon. All rights reserved.
 //
 //  Redistribution and use in source and binary forms, with or without
 //  modification, are permitted provided that the following conditions are
@@ -35,22 +34,18 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#ifndef GAFFERARNOLD_TYPEIDS_H
-#define GAFFERARNOLD_TYPEIDS_H
+#ifndef GAFFERVDB_TYPEIDS_H
+#define GAFFERVDB_TYPEIDS_H
 
-namespace GafferArnold
+namespace GafferVDB
 {
 
 enum TypeId
 {
-	ArnoldShaderTypeId = 110900,
-	ArnoldOptionsTypeId = 110901,
-	ArnoldAttributesTypeId = 110902,
-	ArnoldLightTypeId = 110903,
-
-	LastTypeId = 110924
+	VDBSceneTypeId = 110925,
+	LastTypeId = 110949
 };
 
-} // namespace GafferArnold
+} // namespace GafferVDB
 
-#endif // GAFFERARNOLD_TYPEIDS_H
+#endif // GAFFERVDB_TYPEIDS_H
