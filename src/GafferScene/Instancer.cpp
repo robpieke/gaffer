@@ -464,7 +464,7 @@ ConstV3fVectorDataPtr Instancer::sourcePoints( const ScenePath &parentPath ) con
 
 int Instancer::instanceIndex( const ScenePath &branchPath ) const
 {
-	return boost::lexical_cast<int>( branchPath[1].value() );
+	return atoi( branchPath[1].c_str() );
 }
 
 Gaffer::ContextPtr Instancer::instanceContext( const Gaffer::Context *parentContext, const ScenePath &branchPath ) const
