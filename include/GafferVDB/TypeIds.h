@@ -42,7 +42,9 @@ namespace GafferVDB
 
 enum TypeId
 {
-	VDBSceneTypeId = 110925,
+	VDBObjectTypeId = 110925,
+	VDBSceneTypeId = 110926,
+	MeshToVDBTypeId = 110927,
 	LastTypeId = 110949
 };
 

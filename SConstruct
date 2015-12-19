@@ -689,6 +689,9 @@ libraries = {
 		"envAppends" : {
 			"LIBS" : [ "Gaffer", "GafferScene", "openvdb" ],
 		},
+		"pythonEnvAppends" : {
+			"LIBS" : [ "GafferVDB" ],
+		}
 	},
 
 	"GafferVDBTest" : {},

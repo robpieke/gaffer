@@ -36,8 +36,14 @@
 
 #include "boost/python.hpp"
 
+#include "GafferVDBBindings/VDBObjectBinding.h"
+
 using namespace boost::python;
+using namespace GafferVDBBindings;
 
 BOOST_PYTHON_MODULE( _GafferVDB )
 {
+
+	bindVDBObject();
+
 }
