@@ -334,6 +334,14 @@ if moduleSearchPath.find( "GafferOSL" ) :
 		}
 	)
 
+# VDB nodes
+
+if moduleSearchPath.find( "GafferVDB" ) :
+
+	import GafferVDB
+
+	nodeMenu.append( "/VDB/MeshToVDB", GafferVDB.MeshToVDB )
+
 # Dispatch nodes
 
 nodeMenu.append( "/Dispatch/System Command", Gaffer.SystemCommand, searchText = "SystemCommand" )
