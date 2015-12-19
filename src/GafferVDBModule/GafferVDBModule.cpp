@@ -36,14 +36,21 @@
 
 #include "boost/python.hpp"
 
+#include "GafferBindings/DependencyNodeBinding.h"
+
+#include "GafferVDB/MeshToVDB.h"
+
 #include "GafferVDBBindings/VDBObjectBinding.h"
 
 using namespace boost::python;
+using namespace GafferVDB;
 using namespace GafferVDBBindings;
 
 BOOST_PYTHON_MODULE( _GafferVDB )
 {
 
 	bindVDBObject();
+
+	GafferBindings::DependencyNodeClass<MeshToVDB>();
 
 }
