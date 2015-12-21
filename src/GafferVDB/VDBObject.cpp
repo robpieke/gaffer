@@ -32,6 +32,8 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
+#include "IECore/Exception.h"
+
 #include "GafferVDB/VDBObject.h"
 
 using namespace IECore;
@@ -41,6 +43,11 @@ IE_CORE_DEFINEOBJECTTYPEDESCRIPTION( VDBObject );
 
 const unsigned int VDBObject::m_ioVersion = 0;
 
+VDBObject::VDBObject( openvdb::GridBase::Ptr grid )
+	:	m_grid( grid )
+{
+}
+
 VDBObject::~VDBObject()
 {
 }
@@ -48,29 +55,48 @@ VDBObject::~VDBObject()
 void VDBObject::copyFrom( const Object *other, CopyContext *context )
 {
 	Object::copyFrom( other, context );
+	const VDBObject *otherVDBObject = static_cast<const VDBObject *>( other );
+	if( !otherVDBObject->m_grid )
+	{
+		m_grid.reset();
+	}
+	else
+	{
+		m_grid = otherVDBObject->m_grid->deepCopyGrid();
+	}
 }
 
 bool VDBObject::isEqualTo( const Object *other ) const
 {
-	return Object::isEqualTo( other );
+	if( !Object::isEqualTo( other ) )
+	{
+		return false;
+	}
+
+	const VDBObject *otherVDBObject = static_cast<const VDBObject *>( other );
+	return m_grid == otherVDBObject->m_grid;
 }
 
 void VDBObject::save( SaveContext *context ) const
 {
 	Object::save( context );
+	throw IECore::NotImplementedException( "VDBObject::save" );
 }
 
 void VDBObject::load( LoadContextPtr context )
 {
 	Object::load( context );
+	throw IECore::NotImplementedException( "VDBObject::load" );
 }
 
 void VDBObject::memoryUsage( Object::MemoryAccumulator &a ) const
 {
 	Object::memoryUsage( a );
+	a.accumulate( m_grid->memUsage() );
 }
 
 void VDBObject::hash( MurmurHash &h ) const
 {
 	Object::hash( h );
+	throw IECore::NotImplementedException( "VDBObject::hash" );
 }

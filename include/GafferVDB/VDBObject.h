@@ -37,6 +37,8 @@
 #ifndef GAFFERVDB_VDBOBJECT_H
 #define GAFFERVDB_VDBOBJECT_H
 
+#include "OpenVDB/Grid.h"
+
 #include "IECore/Data.h"
 
 #include "GafferVDB/TypeIds.h"
@@ -49,7 +51,12 @@ class VDBObject : public IECore::Object
 
 	public :
 
+		VDBObject( openvdb::GridBase::Ptr grid = openvdb::GridBase::Ptr() );
+
 		IE_CORE_DECLAREEXTENSIONOBJECT( GafferVDB::VDBObject, VDBObjectTypeId, IECore::Object );
+
+		openvdb::GridBase *grid();
+		const openvdb::GridBase *grid() const;
 
 	protected :
 
@@ -58,6 +65,8 @@ class VDBObject : public IECore::Object
 	private :
 
 		static const unsigned int m_ioVersion;
+
+		openvdb::GridBase::Ptr m_grid;
 
 };
 

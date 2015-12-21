@@ -36,9 +36,73 @@
 
 #include "GafferVDB/MeshToVDB.h"
 
+using namespace std;
 using namespace IECore;
 using namespace Gaffer;
 using namespace GafferVDB;
+
+//////////////////////////////////////////////////////////////////////////
+// Utilities. Perhaps these belong in Cortex one day?
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+
+struct CortexMeshDataAdapter
+{
+
+	CortexMeshDataAdapter( const IECore::MeshPrimitive *mesh )
+		:	m_numFaces( mesh->numFaces() ),
+			m_numVertices( mesh->variableSize( PrimitiveVariable::Vertex ) ),
+			m_verticesPerFace( mesh->verticesPerFace()->readable() ),
+			m_vertexIds( mesh->vertexIds()->readable() )
+	{
+		size_t offset = 0;
+		m_polygonOffsets.reserve( m_polygonCount );
+		for( vector<int>::const_iterator it = m_verticesPerFace.begin(), eIt = m_verticesPerFace.end(); it != eIt; ++it )
+		{
+			m_faceOffsets.push_back( offset );
+			offset += *it;
+		}
+	}
+
+	size_t polygonCount() const
+	{
+		return m_polygonCount;
+	}
+
+	size_t pointCount() const
+	{
+		return m_pointCount;
+	}
+
+	size_t vertexCount( size_t polygonIndex ) const
+	{
+		return m_verticesPerFace[polygonIndex];
+	}
+
+	/// NEED TO WORRY ABOUT THE "GRID INDEX SPACE PART!!"
+	// Return position pos in local grid index space for polygon n and vertex v
+	void getIndexSpacePoint( size_t polygonIndex, size_t polygonVertexIndex, openvdb::Vec3d &pos ) const
+	{
+		!!!
+	}
+
+	private :
+
+		const size_t m_numFaces;
+		const size_t m_numVertices;
+		const vector<int> &m_verticesPerFace;
+		const vector<int> &m_vertexIds;
+		vector<int> m_faceOffsets;
+
+};
+
+} // namespace
+
+//////////////////////////////////////////////////////////////////////////
+// MeshToVDB implementation
+//////////////////////////////////////////////////////////////////////////
 
 IE_CORE_DEFINERUNTIMETYPED( MeshToVDB );
 
@@ -71,5 +135,11 @@ void MeshToVDB::hashProcessedObject( const ScenePath &path, const Gaffer::Contex
 
 IECore::ConstObjectPtr MeshToVDB::computeProcessedObject( const ScenePath &path, const Gaffer::Context *context, IECore::ConstObjectPtr inputObject ) const
 {
-	return inputObject;
+	const MeshPrimitive *mesh = runTimeCast<MeshPrimitive>( inputObject.get() );
+	if( !mesh )
+	{
+		return inputObject;
+	}
+
+
 }
