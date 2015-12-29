@@ -37,6 +37,8 @@
 #ifndef GAFFERVDB_MESHTOVDB_H
 #define GAFFERVDB_MESHTOVDB_H
 
+#include "Gaffer/NumericPlug.h"
+
 #include "GafferScene/SceneElementProcessor.h"
 
 #include "GafferVDB/TypeIds.h"
@@ -44,7 +46,8 @@
 namespace GafferVDB
 {
 
-/// \todo Should this be MeshToLevelSet?
+/// \todo Should this be MeshToLevelSet? NO! (because it could make fog type volumes too).
+/// Maybe MeshToVolume though?
 class MeshToVDB : public GafferScene::SceneElementProcessor
 {
 
@@ -54,6 +57,9 @@ class MeshToVDB : public GafferScene::SceneElementProcessor
 		virtual ~MeshToVDB();
 
 		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( GafferVDB::MeshToVDB, MeshToVDBTypeId, GafferScene::SceneElementProcessor );
+
+		Gaffer::FloatPlug *voxelSizePlug();
+		const Gaffer::FloatPlug *voxelSizePlug() const;
 
 		virtual void affects( const Gaffer::Plug *input, AffectedPlugsContainer &outputs ) const;
 

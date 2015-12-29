@@ -39,7 +39,7 @@
 
 #include "OpenVDB/Grid.h"
 
-#include "IECore/Data.h"
+#include "IECore/Object.h"
 
 #include "GafferVDB/TypeIds.h"
 
