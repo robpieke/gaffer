@@ -43,6 +43,7 @@
 #include "GafferVDB/MeshToVDB.h"
 
 using namespace std;
+using namespace Imath;
 using namespace IECore;
 using namespace Gaffer;
 using namespace GafferVDB;
@@ -57,11 +58,12 @@ namespace
 struct CortexMeshAdapter
 {
 
-	CortexMeshAdapter( const IECore::MeshPrimitive *mesh )
+	CortexMeshAdapter( const IECore::MeshPrimitive *mesh, const openvdb::math::Transform *transform )
 		:	m_numFaces( mesh->numFaces() ),
 			m_numVertices( mesh->variableSize( PrimitiveVariable::Vertex ) ),
 			m_verticesPerFace( mesh->verticesPerFace()->readable() ),
-			m_vertexIds( mesh->vertexIds()->readable() )
+			m_vertexIds( mesh->vertexIds()->readable() ),
+			m_transform( transform )
 	{
 		size_t offset = 0;
 		m_faceOffsets.reserve( m_numFaces );
@@ -70,6 +72,10 @@ struct CortexMeshAdapter
 			m_faceOffsets.push_back( offset );
 			offset += *it;
 		}
+
+		const V3fVectorData *points = mesh->variableData<V3fVectorData>( "P", PrimitiveVariable::Vertex );
+		std::cerr << "POINTS DATA " << points << std::endl;
+		m_points = &points->readable();
 	}
 
 	size_t polygonCount() const
@@ -87,20 +93,24 @@ struct CortexMeshAdapter
 		return m_verticesPerFace[polygonIndex];
 	}
 
-	/// NEED TO WORRY ABOUT THE "GRID INDEX SPACE PART!!"
 	// Return position pos in local grid index space for polygon n and vertex v
 	void getIndexSpacePoint( size_t polygonIndex, size_t polygonVertexIndex, openvdb::Vec3d &pos ) const
 	{
-		//!!!
+		/// \todo Threaded pretransform in constructor?
+		const V3f p = (*m_points)[ m_vertexIds[ m_faceOffsets[polygonIndex] + polygonVertexIndex ] ];
+		pos = m_transform->worldToIndex( openvdb::math::Vec3s( p.x, p.y, p.z ) );
 	}
 
 	private :
 
+	/// \todo WE DON'T NEED ALL THIS CRAP
 		const size_t m_numFaces;
 		const size_t m_numVertices;
 		const vector<int> &m_verticesPerFace;
 		const vector<int> &m_vertexIds;
 		vector<int> m_faceOffsets;
+		const vector<V3f> *m_points;
+		const openvdb::math::Transform *m_transform;
 
 };
 
@@ -170,7 +180,7 @@ IECore::ConstObjectPtr MeshToVDB::computeProcessedObject( const ScenePath &path,
 	openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform( voxelSize );
 
 	openvdb::FloatGrid::Ptr grid = openvdb::tools::meshToVolume<openvdb::FloatGrid>(
-		CortexMeshAdapter( mesh ),
+		CortexMeshAdapter( mesh, transform.get() ),
 		*transform,
 		3.0f, //exBand in voxel units, PLUGS PLEASE!!!
 		3.0f, //inBand in voxel units,
