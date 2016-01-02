@@ -52,6 +52,16 @@ VDBObject::~VDBObject()
 {
 }
 
+openvdb::GridBase::Ptr VDBObject::grid()
+{
+	return m_grid;
+}
+
+openvdb::GridBase::ConstPtr VDBObject::grid() const
+{
+	return m_grid;
+}
+
 void VDBObject::copyFrom( const Object *other, CopyContext *context )
 {
 	Object::copyFrom( other, context );

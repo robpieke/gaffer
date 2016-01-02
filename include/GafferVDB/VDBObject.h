@@ -55,8 +55,8 @@ class VDBObject : public IECore::Object
 
 		IE_CORE_DECLAREEXTENSIONOBJECT( GafferVDB::VDBObject, VDBObjectTypeId, IECore::Object );
 
-		openvdb::GridBase *grid();
-		const openvdb::GridBase *grid() const;
+		openvdb::GridBase::Ptr grid();
+		openvdb::GridBase::ConstPtr grid() const;
 
 	protected :
 
