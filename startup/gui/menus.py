@@ -339,8 +339,10 @@ if moduleSearchPath.find( "GafferOSL" ) :
 if moduleSearchPath.find( "GafferVDB" ) :
 
 	import GafferVDB
+	import GafferVDBUI
 
 	nodeMenu.append( "/VDB/MeshToVDB", GafferVDB.MeshToVDB )
+	nodeMenu.append( "/VDB/VolumeToMesh", GafferVDB.VolumeToMesh )
 
 # Dispatch nodes
 
