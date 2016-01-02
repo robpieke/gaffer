@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 //
-//  Copyright (c) 2015, John Haddon. All rights reserved.
+//  Copyright (c) 2016, John Haddon. All rights reserved.
 //
 //  Redistribution and use in source and binary forms, with or without
 //  modification, are permitted provided that the following conditions are
@@ -34,25 +34,50 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include "boost/python.hpp"
+#ifndef GAFFERVDB_VOLUMETOMESH_H
+#define GAFFERVDB_VOLUMETOMESH_H
 
-#include "GafferBindings/DependencyNodeBinding.h"
+#include "Gaffer/NumericPlug.h"
 
-#include "GafferVDB/MeshToVDB.h"
-#include "GafferVDB/VolumeToMesh.h"
+#include "GafferScene/SceneElementProcessor.h"
 
-#include "GafferVDBBindings/VDBObjectBinding.h"
+#include "GafferVDB/TypeIds.h"
 
-using namespace boost::python;
-using namespace GafferVDB;
-using namespace GafferVDBBindings;
-
-BOOST_PYTHON_MODULE( _GafferVDB )
+namespace GafferVDB
 {
 
-	bindVDBObject();
+class VolumeToMesh : public GafferScene::SceneElementProcessor
+{
 
-	GafferBindings::DependencyNodeClass<MeshToVDB>();
-	GafferBindings::DependencyNodeClass<VolumeToMesh>();
+	public :
 
-}
+		VolumeToMesh( const std::string &name=defaultName<VolumeToMesh>() );
+		virtual ~VolumeToMesh();
+
+		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( GafferVDB::VolumeToMesh, VolumeToMeshTypeId, GafferScene::SceneElementProcessor );
+
+		Gaffer::FloatPlug *isoValuePlug();
+		const Gaffer::FloatPlug *isoValuePlug() const;
+
+		Gaffer::FloatPlug *adaptivityPlug();
+		const Gaffer::FloatPlug *adaptivityPlug() const;
+
+		virtual void affects( const Gaffer::Plug *input, AffectedPlugsContainer &outputs ) const;
+
+	protected :
+
+		virtual bool processesObject() const;
+		virtual void hashProcessedObject( const ScenePath &path, const Gaffer::Context *context, IECore::MurmurHash &h ) const;
+		virtual IECore::ConstObjectPtr computeProcessedObject( const ScenePath &path, const Gaffer::Context *context, IECore::ConstObjectPtr inputObject ) const;
+
+	private :
+
+		static size_t g_firstPlugIndex;
+
+};
+
+IE_CORE_DECLAREPTR( VolumeToMesh )
+
+} // namespace GafferVDB
+
+#endif // GAFFERVDB_VOLUMETOMESH_H

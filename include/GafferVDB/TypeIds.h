@@ -45,6 +45,7 @@ enum TypeId
 	VDBObjectTypeId = 110925,
 	VDBSceneTypeId = 110926,
 	MeshToVDBTypeId = 110927,
+	VolumeToMeshTypeId = 110928,
 	LastTypeId = 110949
 };
 
