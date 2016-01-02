@@ -694,6 +694,15 @@ libraries = {
 		}
 	},
 
+	"GafferVDBUI" : {
+		"envAppends" : {
+			"LIBS" : [ "Gaffer", "GafferScene", "GafferSceneUI", "IECoreGL", "GafferVDB", "openvdb" ],
+		},
+		"pythonEnvAppends" : {
+			"LIBS" : [ "GafferScene", "GafferVDB", "GafferVDBUI", "openvdb" ],
+		}
+	},
+
 	"GafferVDBTest" : {},
 
 	"apps" : {
