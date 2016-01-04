@@ -74,7 +74,6 @@ struct CortexMeshAdapter
 		}
 
 		const V3fVectorData *points = mesh->variableData<V3fVectorData>( "P", PrimitiveVariable::Vertex );
-		std::cerr << "POINTS DATA " << points << std::endl;
 		m_points = &points->readable();
 	}
 
