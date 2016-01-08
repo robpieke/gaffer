@@ -52,6 +52,170 @@
 
 using namespace Gaffer;
 
+namespace
+{
+
+class Pool : boost::noncopyable
+{
+
+	public :
+
+		Pool()
+			:	m_blockEnd( NULL ), m_nextAllocation( NULL )
+		{
+		}
+
+		~Pool()
+		{
+			flush();
+		}
+
+		char *allocate( size_t size )
+		{
+			if( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ) )
+			{
+				/// \todo HOW DO WE PICK A SIZE???
+				/// AND SHOULD WE ASSERT SUMMINK ABOUT THE SIZE BEING LESS THAN OUR CHUNK SIZE??
+				size_t blockSize = 1024 * 1024;
+				blockSize = std::max( blockSize, size );
+				/*if( size > blockSize )
+				{
+					std::cerr << "YIKES! " << size << " > " << blockSize << std::endl;
+				}*/
+				char *block = static_cast<char *>( malloc( blockSize ) );
+				m_blocks.push_back( block );
+				m_blockEnd = block + blockSize;
+				m_nextAllocation = block;
+			}
+
+			char *result = m_nextAllocation;
+			m_nextAllocation += size;
+
+			//m_allocated.insert( result );
+
+			return result;
+		}
+
+		void deallocate( const void *p )
+		{
+			//m_allocated.erase( p );
+			//std::cerr << "DEALLOCATE " << m_allocated.size() << std::endl;
+		}
+
+		void flush()
+		{
+			/*if( m_allocated.size() != 0 )
+			{
+				std::cerr << "FLUSING BEFORE DEALLOCATED ALL!!" << std::endl;
+				exit( 1 );
+			}*/
+
+			//std::cerr << "FLUSHING SIZE " << m_blocks.size() << std::endl;
+			for( std::vector<char *>::const_iterator it = m_blocks.begin(), eIt = m_blocks.end(); it != eIt; ++it )
+			{
+				//std::cerr << "DELETING " << *it << std::endl;
+				//::operator delete( *it );
+				// FREE!!
+				free( *it );
+			}
+			m_blocks.clear();
+			//std::cerr << "FLUSHED SIZE " << m_blocks.size() << std::endl;
+			m_nextAllocation = m_blockEnd = NULL;
+		}
+
+	private :
+
+		//std::set<const void *> m_allocated;
+
+		// Stack of blocks of memory. The top block
+		// is the one we're allocating from. All blocks
+		// below that have been filled already.
+		std::vector<char *> m_blocks;
+		// Pointer to the end of the current block.
+		char *m_blockEnd;
+		// Pointer to the location of our next allocation.
+		char *m_nextAllocation;
+
+};
+
+/// \todo RENAME!!!??? MOVE TO A PRIVATE HEADER SOMEWHERE???
+template<typename T>
+class FlushingAllocator
+{
+
+	public :
+
+		typedef size_t size_type;
+		typedef ptrdiff_t difference_type;
+		typedef T *pointer;
+		typedef const T *const_pointer;
+		typedef T &reference;
+		typedef const T &const_reference;
+		typedef T value_type;
+
+		FlushingAllocator()
+			:	m_pool( new Pool )
+		{
+		}
+
+		template<typename U>
+		FlushingAllocator( const FlushingAllocator<U> &other )
+		{
+			m_pool = other.pool();
+		};
+
+		pointer address( reference x ) const { return &x; }
+		const_pointer address( const_reference x ) const { return &x; }
+
+		pointer allocate( size_type n, const void *hint = 0 )
+		{
+			/*if( __builtin_expect( n > this->max_size(), false ) )
+			{
+				std::__throw_bad_alloc();
+			}*/
+
+			//return static_cast<T *>(::operator new( n * sizeof( T ) ) );
+			///
+			// \todo SHOULD THIS BE A DIFFERENT SORT OF CAST? SHOULD
+			// POOL RETURN VOID *?
+			pointer r = reinterpret_cast<T *>( m_pool->allocate( n * sizeof( T ) ) );
+			//std::cerr << "ALLOCATED " << r << std::endl;
+			return r;
+		}
+
+		void deallocate( pointer p, size_type n )
+		{
+			//std::cerr << "DEALLOCATED " << p << std::endl;
+			//m_pool->deallocate( p );
+		}
+
+		size_type max_size() const throw()
+		{
+			return size_t( -1 ) / sizeof( T );
+		}
+
+		void construct( pointer p, const T &v ) { ::new( p ) T( v ); }
+		void destroy( pointer p ) { p->~T(); }
+
+		template<typename U>
+		struct rebind
+		{
+			typedef FlushingAllocator<U> other;
+		};
+
+		boost::shared_ptr<Pool> pool() const
+		{
+			return m_pool;
+		}
+
+	private :
+
+		boost::shared_ptr<Pool> m_pool;
+
+};
+
+} // namespace
+
 //////////////////////////////////////////////////////////////////////////
 //
 // The computation class is responsible for managing calls to
@@ -227,7 +391,15 @@ class ValuePlug::Computation
 					// by clearing it after every Nth computation.
 					// N == 100 was chosen based on memory/performance
 					// analysis of a particularly heavy render process.
-					m_threadData->hashCache.clear();
+					//std::cerr << "CLEARING SIZE " << m_threadData->hashCache.size() << std::endl;
+					//std::cerr << "CLEARING" << std::endl;
+					{
+						HashCache tmp;
+						m_threadData->hashCache.swap( tmp );
+					}
+					//m_threadData->hashCache.clear(); NOT ENOUGH TO DEALLOCATE EVERYTHING!!
+					//std::cerr << "CLEARED" << std::endl;
+					m_threadData->hashCache.get_allocator().pool()->flush();
 					m_threadData->hashCacheClearCount = 0;
 					m_threadData->clearHashCache = 0;
 				}
@@ -280,6 +452,7 @@ class ValuePlug::Computation
 
 			IECore::MurmurHash h = hashInternal();
 			hashCache[key] = h;
+
 			return h;
 		}
 
@@ -421,7 +594,13 @@ class ValuePlug::Computation
 		// connection is changed. We also clear the cache unconditionally every N
 		// computations, to prevent unbounded growth.
 		typedef std::pair<const ValuePlug *, IECore::MurmurHash> HashCacheKey;
-		typedef boost::unordered_map<HashCacheKey, IECore::MurmurHash> HashCache;
+		typedef boost::unordered_map<
+			HashCacheKey,
+			IECore::MurmurHash,
+			boost::hash<HashCacheKey>,
+			std::equal_to<HashCacheKey>,
+			FlushingAllocator<std::pair<const HashCacheKey, IECore::MurmurHash> >
+		> HashCache;
 
 		// A computation starts with a call to ValuePlug::getValue(), but the compute()
 		// that triggers will make calls to getValue() on upstream plugs too. We use this
