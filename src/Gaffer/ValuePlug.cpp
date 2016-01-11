@@ -55,14 +55,19 @@ using namespace Gaffer;
 namespace
 {
 
+//////////////////////////////////////////////////////////////////////////
+// Pool allocator
+//////////////////////////////////////////////////////////////////////////
+
 class Pool : boost::noncopyable
 {
 
 	public :
 
-		Pool()
-			:	m_blockEnd( NULL ), m_nextAllocation( NULL )
+		Pool( size_t blockSize, size_t smallSize )
+			:	m_blockSize( blockSize ), m_smallSize( smallSize ), m_blockEnd( NULL ), m_nextAllocation( NULL )
 		{
+			assert( m_smallSize < m_blockSize );
 		}
 
 		~Pool()
@@ -70,62 +75,50 @@ class Pool : boost::noncopyable
 			flush();
 		}
 
-		char *allocate( size_t size )
+		void *allocate( size_t size )
 		{
+			// Fall back to malloc if size exceeds small size.
+			if( size > m_smallSize )
+			{
+				return static_cast<char *>( malloc( size ) );
+			}
+
 			if( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ) )
 			{
-				/// \todo HOW DO WE PICK A SIZE???
-				/// AND SHOULD WE ASSERT SUMMINK ABOUT THE SIZE BEING LESS THAN OUR CHUNK SIZE??
-				size_t blockSize = 1024 * 1024;
-				blockSize = std::max( blockSize, size );
-				/*if( size > blockSize )
-				{
-					std::cerr << "YIKES! " << size << " > " << blockSize << std::endl;
-				}*/
-				char *block = static_cast<char *>( malloc( blockSize ) );
+				char *block = static_cast<char *>( malloc( m_blockSize ) );
 				m_blocks.push_back( block );
-				m_blockEnd = block + blockSize;
+				m_blockEnd = block + m_blockSize;
 				m_nextAllocation = block;
 			}
 
 			char *result = m_nextAllocation;
 			m_nextAllocation += size;
 
-			//m_allocated.insert( result );
-
 			return result;
 		}
 
-		void deallocate( const void *p )
+		void deallocate( void *p, size_t size )
 		{
-			//m_allocated.erase( p );
-			//std::cerr << "DEALLOCATE " << m_allocated.size() << std::endl;
+			if( size > m_smallSize )
+			{
+				free( p );
+			}
 		}
 
 		void flush()
 		{
-			/*if( m_allocated.size() != 0 )
-			{
-				std::cerr << "FLUSING BEFORE DEALLOCATED ALL!!" << std::endl;
-				exit( 1 );
-			}*/
-
-			//std::cerr << "FLUSHING SIZE " << m_blocks.size() << std::endl;
 			for( std::vector<char *>::const_iterator it = m_blocks.begin(), eIt = m_blocks.end(); it != eIt; ++it )
 			{
-				//std::cerr << "DELETING " << *it << std::endl;
-				//::operator delete( *it );
-				// FREE!!
 				free( *it );
 			}
 			m_blocks.clear();
-			//std::cerr << "FLUSHED SIZE " << m_blocks.size() << std::endl;
 			m_nextAllocation = m_blockEnd = NULL;
 		}
 
 	private :
 
-		//std::set<const void *> m_allocated;
+		const size_t m_blockSize;
+		const size_t m_smallSize;
 
 		// Stack of blocks of memory. The top block
 		// is the one we're allocating from. All blocks
@@ -138,9 +131,10 @@ class Pool : boost::noncopyable
 
 };
 
-/// \todo RENAME!!!??? MOVE TO A PRIVATE HEADER SOMEWHERE???
+typedef boost::shared_ptr<Pool> PoolPtr;
+
 template<typename T>
-class FlushingAllocator
+class PoolAllocator
 {
 
 	public :
@@ -153,40 +147,35 @@ class FlushingAllocator
 		typedef const T &const_reference;
 		typedef T value_type;
 
-		FlushingAllocator()
-			:	m_pool( new Pool )
+		PoolAllocator( const PoolPtr &pool )
+			:	m_pool( pool )
 		{
 		}
 
 		template<typename U>
-		FlushingAllocator( const FlushingAllocator<U> &other )
+		PoolAllocator( const PoolAllocator<U> &other )
+			:	m_pool( other.pool() )
 		{
-			m_pool = other.pool();
-		};
+		}
 
-		pointer address( reference x ) const { return &x; }
-		const_pointer address( const_reference x ) const { return &x; }
+		pointer address( reference x ) const
+		{
+			return &x;
+		}
+
+		const_pointer address( const_reference x ) const
+		{
+			return &x;
+		}
 
 		pointer allocate( size_type n, const void *hint = 0 )
 		{
-			/*if( __builtin_expect( n > this->max_size(), false ) )
-			{
-				std::__throw_bad_alloc();
-			}*/
-
-			//return static_cast<T *>(::operator new( n * sizeof( T ) ) );
-			///
-			// \todo SHOULD THIS BE A DIFFERENT SORT OF CAST? SHOULD
-			// POOL RETURN VOID *?
-			pointer r = reinterpret_cast<T *>( m_pool->allocate( n * sizeof( T ) ) );
-			//std::cerr << "ALLOCATED " << r << std::endl;
-			return r;
+			return static_cast<T *>( m_pool->allocate( n * sizeof( T ) ) );
 		}
 
 		void deallocate( pointer p, size_type n )
 		{
-			//std::cerr << "DEALLOCATED " << p << std::endl;
-			//m_pool->deallocate( p );
+			m_pool->deallocate( p, n );
 		}
 
 		size_type max_size() const throw()
@@ -194,23 +183,30 @@ class FlushingAllocator
 			return size_t( -1 ) / sizeof( T );
 		}
 
-		void construct( pointer p, const T &v ) { ::new( p ) T( v ); }
-		void destroy( pointer p ) { p->~T(); }
+		void construct( pointer p, const T &v )
+		{
+			::new( p ) T( v );
+		}
+
+		void destroy( pointer p )
+		{
+			p->~T();
+		}
 
 		template<typename U>
 		struct rebind
 		{
-			typedef FlushingAllocator<U> other;
+			typedef PoolAllocator<U> other;
 		};
 
-		boost::shared_ptr<Pool> pool() const
+		PoolPtr pool() const
 		{
 			return m_pool;
 		}
 
 	private :
 
-		boost::shared_ptr<Pool> m_pool;
+		PoolPtr m_pool;
 
 };
 
@@ -391,15 +387,9 @@ class ValuePlug::Computation
 					// by clearing it after every Nth computation.
 					// N == 100 was chosen based on memory/performance
 					// analysis of a particularly heavy render process.
-					//std::cerr << "CLEARING SIZE " << m_threadData->hashCache.size() << std::endl;
-					//std::cerr << "CLEARING" << std::endl;
-					{
-						HashCache tmp;
-						m_threadData->hashCache.swap( tmp );
-					}
-					//m_threadData->hashCache.clear(); NOT ENOUGH TO DEALLOCATE EVERYTHING!!
-					//std::cerr << "CLEARED" << std::endl;
-					m_threadData->hashCache.get_allocator().pool()->flush();
+					m_threadData->hashCache.reset();
+					m_threadData->hashCachePool->flush();
+					m_threadData->hashCache.reset( new HashCache( m_threadData->hashCachePool ) );
 					m_threadData->hashCacheClearCount = 0;
 					m_threadData->clearHashCache = 0;
 				}
@@ -442,7 +432,7 @@ class ValuePlug::Computation
 				return *m_precomputedHash;
 			}
 
-			HashCache &hashCache = m_threadData->hashCache;
+			HashCache &hashCache = *(m_threadData->hashCache);
 			HashCacheKey key( m_resultPlug, Context::current()->hash() );
 			HashCache::iterator it = hashCache.find( key );
 			if( it != hashCache.end() )
@@ -594,12 +584,14 @@ class ValuePlug::Computation
 		// connection is changed. We also clear the cache unconditionally every N
 		// computations, to prevent unbounded growth.
 		typedef std::pair<const ValuePlug *, IECore::MurmurHash> HashCacheKey;
+		typedef std::pair<const HashCacheKey, IECore::MurmurHash> HashCacheValue;
+		typedef PoolAllocator<HashCacheValue> HashCacheAllocator;
 		typedef boost::unordered_map<
 			HashCacheKey,
 			IECore::MurmurHash,
 			boost::hash<HashCacheKey>,
 			std::equal_to<HashCacheKey>,
-			FlushingAllocator<std::pair<const HashCacheKey, IECore::MurmurHash> >
+			HashCacheAllocator
 		> HashCache;
 
 		// A computation starts with a call to ValuePlug::getValue(), but the compute()
@@ -609,16 +601,26 @@ class ValuePlug::Computation
 		// the last entry.
 		typedef std::stack<Computation *> ComputationStack;
 
-		// To support multithreading, each thread has it's own state.
+		// To support multithreading, each thread has its own state.
 		struct ThreadData
 		{
-			ThreadData() :	hashCacheClearCount( 0 ), errorSource( NULL ) {}
+
+			ThreadData()
+				:	hashCacheClearCount( 0 ),
+					hashCachePool( new Pool( sizeof( HashCacheValue ) * 1024, sizeof( HashCacheValue ) * 2 ) ),
+					hashCache( new HashCache( HashCacheAllocator( hashCachePool ) ) ),
+					errorSource( NULL )
+			{
+			}
+
 			int hashCacheClearCount;
-			HashCache hashCache;
+			PoolPtr hashCachePool;
+			boost::shared_ptr<HashCache> hashCache;
 			// Flag to request that hashCache be cleared.
 			tbb::atomic<int> clearHashCache;
 			ComputationStack computationStack;
 			const Plug *errorSource;
+
 		};
 
 		static tbb::enumerable_thread_specific<ThreadData, tbb::cache_aligned_allocator<ThreadData>, tbb::ets_key_per_instance > g_threadData;
