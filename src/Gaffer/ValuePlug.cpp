@@ -59,16 +59,15 @@ namespace
 // Pool allocator
 //////////////////////////////////////////////////////////////////////////
 
-const size_t m_smallSize = 112;
-
 class Pool : boost::noncopyable
 {
 
 	public :
 
-		Pool()
-			:	m_blockEnd( NULL ), m_nextAllocation( NULL )
+		Pool( size_t blockSize, size_t smallSize )
+			:	m_blockSize( blockSize ), m_smallSize( smallSize ), m_blockEnd( NULL ), m_nextAllocation( NULL )
 		{
+			assert( m_smallSize < m_blockSize );
 		}
 
 		~Pool()
@@ -86,10 +85,9 @@ class Pool : boost::noncopyable
 
 			if( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ) )
 			{
-				const size_t blockSize = 1024 * 1024;
-				char *block = static_cast<char *>( malloc( blockSize ) );
+				char *block = static_cast<char *>( malloc( m_blockSize ) );
 				m_blocks.push_back( block );
-				m_blockEnd = block + blockSize;
+				m_blockEnd = block + m_blockSize;
 				m_nextAllocation = block;
 			}
 
@@ -119,6 +117,9 @@ class Pool : boost::noncopyable
 
 	private :
 
+		const size_t m_blockSize;
+		const size_t m_smallSize;
+
 		// Stack of blocks of memory. The top block
 		// is the one we're allocating from. All blocks
 		// below that have been filled already.
@@ -147,15 +148,15 @@ class PoolAllocator
 		typedef T value_type;
 
 		PoolAllocator()
-			:	m_pool( new Pool )
+			:	m_pool( new Pool( 1024 * 1024, 112 ) )
 		{
 		}
 
 		template<typename U>
 		PoolAllocator( const PoolAllocator<U> &other )
+			:	m_pool( other.pool() )
 		{
-			m_pool = other.pool();
-		};
+		}
 
 		pointer address( reference x ) const
 		{
