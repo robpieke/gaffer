@@ -81,14 +81,14 @@ class Pool : boost::noncopyable
 		{
 			//++m_a;
 			// Fall back to malloc if size exceeds small size.
-			if( size > SmallSize )
+			if( __builtin_expect( size > SmallSize, false ) )
 			{
 				void *r = malloc( size );
 				//m_allocatedBig.insert( r );
 				return static_cast<char *>( r );
 			}
 
-			if( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ) )
+			if(  __builtin_expect( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ), false ) )
 			{
 				char *block = static_cast<char *>( malloc( m_blockSize ) );
 				//m_allocatedBlocks.insert( block );
@@ -106,7 +106,7 @@ class Pool : boost::noncopyable
 		void deallocate( void *p, size_t size )
 		{
 			//--m_a;
-			if( size > SmallSize )
+			if( __builtin_expect( size > SmallSize, false ) )
 			{
 				//m_allocatedBig.erase( p );
 				free( p );
