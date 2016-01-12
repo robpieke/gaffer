@@ -126,6 +126,8 @@ class Pool : boost::noncopyable
 
 };
 
+typedef boost::shared_ptr<Pool> PoolPtr;
+
 template<typename T>
 class PoolAllocator
 {
@@ -163,8 +165,7 @@ class PoolAllocator
 
 		pointer allocate( size_type n, const void *hint = 0 )
 		{
-			pointer r = reinterpret_cast<T *>( m_pool->allocate( n * sizeof( T ) ) );
-			return r;
+			return static_cast<T *>( m_pool->allocate( n * sizeof( T ) ) );
 		}
 
 		void deallocate( pointer p, size_type n )
@@ -193,14 +194,14 @@ class PoolAllocator
 			typedef PoolAllocator<U> other;
 		};
 
-		boost::shared_ptr<Pool> pool() const
+		PoolPtr pool() const
 		{
 			return m_pool;
 		}
 
 	private :
 
-		boost::shared_ptr<Pool> m_pool;
+		PoolPtr m_pool;
 
 };
 
