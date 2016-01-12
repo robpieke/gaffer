@@ -116,7 +116,7 @@ class Pool : boost::noncopyable
 };
 
 template<typename T>
-class FlushingAllocator
+class PoolAllocator
 {
 
 	public :
@@ -129,13 +129,13 @@ class FlushingAllocator
 		typedef const T &const_reference;
 		typedef T value_type;
 
-		FlushingAllocator()
+		PoolAllocator()
 			:	m_pool( new Pool )
 		{
 		}
 
 		template<typename U>
-		FlushingAllocator( const FlushingAllocator<U> &other )
+		PoolAllocator( const PoolAllocator<U> &other )
 		{
 			m_pool = other.pool();
 		};
@@ -179,7 +179,7 @@ class FlushingAllocator
 		template<typename U>
 		struct rebind
 		{
-			typedef FlushingAllocator<U> other;
+			typedef PoolAllocator<U> other;
 		};
 
 		boost::shared_ptr<Pool> pool() const
@@ -577,7 +577,7 @@ class ValuePlug::Computation
 			IECore::MurmurHash,
 			boost::hash<HashCacheKey>,
 			std::equal_to<HashCacheKey>,
-			FlushingAllocator<std::pair<const HashCacheKey, IECore::MurmurHash> >
+			PoolAllocator<std::pair<const HashCacheKey, IECore::MurmurHash> >
 		> HashCache;
 
 		// A computation starts with a call to ValuePlug::getValue(), but the compute()
