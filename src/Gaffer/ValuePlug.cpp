@@ -68,6 +68,7 @@ class Pool : boost::noncopyable
 			:	m_blockSize( blockSize ), m_smallSize( smallSize ), m_blockEnd( NULL ), m_nextAllocation( NULL )
 		{
 			assert( m_smallSize < m_blockSize );
+			//m_a = 0;
 		}
 
 		~Pool()
@@ -77,15 +78,19 @@ class Pool : boost::noncopyable
 
 		void *allocate( size_t size )
 		{
+			//++m_a;
 			// Fall back to malloc if size exceeds small size.
 			if( size > m_smallSize )
 			{
-				return static_cast<char *>( malloc( size ) );
+				void *r = malloc( size );
+				//m_allocatedBig.insert( r );
+				return static_cast<char *>( r );
 			}
 
 			if( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ) )
 			{
 				char *block = static_cast<char *>( malloc( m_blockSize ) );
+				//m_allocatedBlocks.insert( block );
 				m_blocks.push_back( block );
 				m_blockEnd = block + m_blockSize;
 				m_nextAllocation = block;
@@ -99,8 +104,10 @@ class Pool : boost::noncopyable
 
 		void deallocate( void *p, size_t size )
 		{
+			//--m_a;
 			if( size > m_smallSize )
 			{
+				//m_allocatedBig.erase( p );
 				free( p );
 			}
 		}
@@ -109,16 +116,24 @@ class Pool : boost::noncopyable
 		{
 			for( std::vector<char *>::const_iterator it = m_blocks.begin(), eIt = m_blocks.end(); it != eIt; ++it )
 			{
+				//m_allocatedBlocks.erase( *it );
 				free( *it );
 			}
 			m_blocks.clear();
-			m_nextAllocation = m_blockEnd = NULL;
+			/*m_nextAllocation = m_blockEnd = NULL;
+			std::cerr << " ALLOCATED BLOCKS " << m_allocatedBlocks.size() << std::endl;
+			std::cerr << " ALLOCATED BIG " << m_allocatedBig.size() << std::endl;
+			std::cerr << " A " << m_a << std::endl;*/
 		}
 
 	private :
 
 		const size_t m_blockSize;
 		const size_t m_smallSize;
+
+		/*size_t m_a;
+		std::set<void *> m_allocatedBig;
+		std::set<void *> m_allocatedBlocks;*/
 
 		// Stack of blocks of memory. The top block
 		// is the one we're allocating from. All blocks
@@ -148,6 +163,7 @@ class PoolAllocator
 		typedef T value_type;
 
 		PoolAllocator()
+			/// \todo DON'T PULL THESE NUMBERS OUT YER ARSE!!
 			:	m_pool( new Pool( 1024 * 1024, 112 ) )
 		{
 		}
@@ -175,7 +191,7 @@ class PoolAllocator
 
 		void deallocate( pointer p, size_type n )
 		{
-			m_pool->deallocate( p, n );
+			m_pool->deallocate( p,  n * sizeof( T ) );
 		}
 
 		size_type max_size() const throw()
@@ -391,13 +407,15 @@ class ValuePlug::Computation
 					// N == 3200 was observed to be 6x faster than
 					// N == 100 for a procedural instancing scene at
 					// a memory cost of about 100 mb.
-					{
+					//{
 						HashCache tmp;
 						//std::cerr << "BEFORE : " << m_threadData->hashCache.get_allocator().pool() << " " << tmp.get_allocator().pool() << std::endl;
+						//m_threadData->hashCache.clear();
+						//m_threadData->hashCache.rehash( 0 ); /// MAKES FOR LOTS OF MISSING ALLOCATED_BIGS!
+						//m_threadData->hashCache.get_allocator().pool()->flush();
 						m_threadData->hashCache.swap( tmp );
 						//std::cerr << "AFTER : " << m_threadData->hashCache.get_allocator().pool() << " " << tmp.get_allocator().pool() << std::endl;
-					}
-
+					//}
 					m_threadData->hashCacheClearCount = 0;
 					m_threadData->clearHashCache = 0;
 				}
