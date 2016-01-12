@@ -88,7 +88,7 @@ class Pool : boost::noncopyable
 			return result;
 		}
 
-		void deallocate( const void *p )
+		void deallocate( const void *p, size_t size )
 		{
 		}
 
@@ -140,8 +140,15 @@ class FlushingAllocator
 			m_pool = other.pool();
 		};
 
-		pointer address( reference x ) const { return &x; }
-		const_pointer address( const_reference x ) const { return &x; }
+		pointer address( reference x ) const
+		{
+			return &x;
+		}
+
+		const_pointer address( const_reference x ) const
+		{
+			return &x;
+		}
 
 		pointer allocate( size_type n, const void *hint = 0 )
 		{
@@ -151,6 +158,7 @@ class FlushingAllocator
 
 		void deallocate( pointer p, size_type n )
 		{
+			m_pool->deallocate( p, n );
 		}
 
 		size_type max_size() const throw()
@@ -158,8 +166,15 @@ class FlushingAllocator
 			return size_t( -1 ) / sizeof( T );
 		}
 
-		void construct( pointer p, const T &v ) { ::new( p ) T( v ); }
-		void destroy( pointer p ) { p->~T(); }
+		void construct( pointer p, const T &v )
+		{
+			::new( p ) T( v );
+		}
+
+		void destroy( pointer p )
+		{
+			p->~T();
+		}
 
 		template<typename U>
 		struct rebind
