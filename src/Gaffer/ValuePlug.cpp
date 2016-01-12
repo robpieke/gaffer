@@ -55,6 +55,8 @@ using namespace Gaffer;
 namespace
 {
 
+const size_t m_smallSize = 112;
+
 class Pool : boost::noncopyable
 {
 
@@ -72,10 +74,15 @@ class Pool : boost::noncopyable
 
 		char *allocate( size_t size )
 		{
+			// Fall back to malloc if size exceeds small size.
+			if( size > m_smallSize )
+			{
+				return static_cast<char *>( malloc( size ) );
+			}
+
 			if( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ) )
 			{
-				size_t blockSize = 1024 * 1024;
-				blockSize = std::max( blockSize, size );
+				const size_t blockSize = 1024 * 1024;
 				char *block = static_cast<char *>( malloc( blockSize ) );
 				m_blocks.push_back( block );
 				m_blockEnd = block + blockSize;
@@ -88,8 +95,12 @@ class Pool : boost::noncopyable
 			return result;
 		}
 
-		void deallocate( const void *p, size_t size )
+		void deallocate( void *p, size_t size )
 		{
+			if( size > m_smallSize )
+			{
+				free( p );
+			}
 		}
 
 		void flush()
