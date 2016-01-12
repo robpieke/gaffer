@@ -59,15 +59,16 @@ namespace
 // Pool allocator
 //////////////////////////////////////////////////////////////////////////
 
+template<size_t SmallSize = 112>
 class Pool : boost::noncopyable
 {
 
 	public :
 
-		Pool( size_t blockSize, size_t smallSize )
-			:	m_blockSize( blockSize ), m_smallSize( smallSize ), m_blockEnd( NULL ), m_nextAllocation( NULL )
+		Pool( size_t blockSize )
+			:	m_blockSize( blockSize ), m_blockEnd( NULL ), m_nextAllocation( NULL )
 		{
-			assert( m_smallSize < m_blockSize );
+			//assert( m_smallSize < m_blockSize );
 			//m_a = 0;
 		}
 
@@ -80,7 +81,7 @@ class Pool : boost::noncopyable
 		{
 			//++m_a;
 			// Fall back to malloc if size exceeds small size.
-			if( size > m_smallSize )
+			if( size > SmallSize )
 			{
 				void *r = malloc( size );
 				//m_allocatedBig.insert( r );
@@ -105,7 +106,7 @@ class Pool : boost::noncopyable
 		void deallocate( void *p, size_t size )
 		{
 			//--m_a;
-			if( size > m_smallSize )
+			if( size > SmallSize )
 			{
 				//m_allocatedBig.erase( p );
 				free( p );
@@ -129,7 +130,7 @@ class Pool : boost::noncopyable
 	private :
 
 		const size_t m_blockSize;
-		const size_t m_smallSize;
+		//const size_t m_smallSize;
 
 		/*size_t m_a;
 		std::set<void *> m_allocatedBig;
@@ -146,7 +147,7 @@ class Pool : boost::noncopyable
 
 };
 
-typedef boost::shared_ptr<Pool> PoolPtr;
+typedef boost::shared_ptr<Pool<> > PoolPtr;
 
 template<typename T>
 class PoolAllocator
@@ -164,7 +165,7 @@ class PoolAllocator
 
 		PoolAllocator()
 			/// \todo DON'T PULL THESE NUMBERS OUT YER ARSE!!
-			:	m_pool( new Pool( 1024 * 1024, 112 ) )
+			:	m_pool( new Pool<>( 1024 * 1024 ) )
 		{
 		}
 
