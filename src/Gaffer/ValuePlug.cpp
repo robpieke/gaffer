@@ -72,7 +72,7 @@ class Pool : boost::noncopyable
 			flush();
 		}
 
-		char *allocate( size_t size )
+		void *allocate( size_t size )
 		{
 			// Fall back to malloc if size exceeds small size.
 			if( size > m_smallSize )
