@@ -204,6 +204,8 @@ class PoolAllocator
 			return m_pool;
 		}
 
+		typedef boost::true_type propagate_on_container_swap;
+
 	private :
 
 		PoolPtr m_pool;
@@ -391,9 +393,10 @@ class ValuePlug::Computation
 					// a memory cost of about 100 mb.
 					{
 						HashCache tmp;
+						//std::cerr << "BEFORE : " << m_threadData->hashCache.get_allocator().pool() << " " << tmp.get_allocator().pool() << std::endl;
 						m_threadData->hashCache.swap( tmp );
+						//std::cerr << "AFTER : " << m_threadData->hashCache.get_allocator().pool() << " " << tmp.get_allocator().pool() << std::endl;
 					}
-					m_threadData->hashCache.get_allocator().pool()->flush();
 
 					m_threadData->hashCacheClearCount = 0;
 					m_threadData->clearHashCache = 0;
@@ -608,11 +611,11 @@ class ValuePlug::Computation
 		struct ThreadData
 		{
 			ThreadData() :	hashCacheClearCount( 0 ), errorSource( NULL ) {}
-			int hashCacheClearCount;
 			HashCache hashCache;
+			ComputationStack computationStack;
+			int hashCacheClearCount;
 			// Flag to request that hashCache be cleared.
 			tbb::atomic<int> clearHashCache;
-			ComputationStack computationStack;
 			const Plug *errorSource;
 		};
 
