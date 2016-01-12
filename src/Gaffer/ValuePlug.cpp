@@ -74,14 +74,8 @@ class Pool : boost::noncopyable
 		{
 			if( !m_nextAllocation || ( m_nextAllocation + size > m_blockEnd ) )
 			{
-				/// \todo HOW DO WE PICK A SIZE???
-				/// AND SHOULD WE ASSERT SUMMINK ABOUT THE SIZE BEING LESS THAN OUR CHUNK SIZE??
 				size_t blockSize = 1024 * 1024;
 				blockSize = std::max( blockSize, size );
-				/*if( size > blockSize )
-				{
-					std::cerr << "YIKES! " << size << " > " << blockSize << std::endl;
-				}*/
 				char *block = static_cast<char *>( malloc( blockSize ) );
 				m_blocks.push_back( block );
 				m_blockEnd = block + blockSize;
@@ -91,41 +85,24 @@ class Pool : boost::noncopyable
 			char *result = m_nextAllocation;
 			m_nextAllocation += size;
 
-			//m_allocated.insert( result );
-
 			return result;
 		}
 
 		void deallocate( const void *p )
 		{
-			//m_allocated.erase( p );
-			//std::cerr << "DEALLOCATE " << m_allocated.size() << std::endl;
 		}
 
 		void flush()
 		{
-			/*if( m_allocated.size() != 0 )
-			{
-				std::cerr << "FLUSING BEFORE DEALLOCATED ALL!!" << std::endl;
-				exit( 1 );
-			}*/
-
-			//std::cerr << "FLUSHING SIZE " << m_blocks.size() << std::endl;
 			for( std::vector<char *>::const_iterator it = m_blocks.begin(), eIt = m_blocks.end(); it != eIt; ++it )
 			{
-				//std::cerr << "DELETING " << *it << std::endl;
-				//::operator delete( *it );
-				// FREE!!
 				free( *it );
 			}
 			m_blocks.clear();
-			//std::cerr << "FLUSHED SIZE " << m_blocks.size() << std::endl;
 			m_nextAllocation = m_blockEnd = NULL;
 		}
 
 	private :
-
-		//std::set<const void *> m_allocated;
 
 		// Stack of blocks of memory. The top block
 		// is the one we're allocating from. All blocks
@@ -138,7 +115,6 @@ class Pool : boost::noncopyable
 
 };
 
-/// \todo RENAME!!!??? MOVE TO A PRIVATE HEADER SOMEWHERE???
 template<typename T>
 class FlushingAllocator
 {
@@ -169,24 +145,12 @@ class FlushingAllocator
 
 		pointer allocate( size_type n, const void *hint = 0 )
 		{
-			/*if( __builtin_expect( n > this->max_size(), false ) )
-			{
-				std::__throw_bad_alloc();
-			}*/
-
-			//return static_cast<T *>(::operator new( n * sizeof( T ) ) );
-			///
-			// \todo SHOULD THIS BE A DIFFERENT SORT OF CAST? SHOULD
-			// POOL RETURN VOID *?
 			pointer r = reinterpret_cast<T *>( m_pool->allocate( n * sizeof( T ) ) );
-			//std::cerr << "ALLOCATED " << r << std::endl;
 			return r;
 		}
 
 		void deallocate( pointer p, size_type n )
 		{
-			//std::cerr << "DEALLOCATED " << p << std::endl;
-			//m_pool->deallocate( p );
 		}
 
 		size_type max_size() const throw()
@@ -397,8 +361,6 @@ class ValuePlug::Computation
 						HashCache tmp;
 						m_threadData->hashCache.swap( tmp );
 					}
-					//m_threadData->hashCache.clear(); NOT ENOUGH TO DEALLOCATE EVERYTHING!!
-					//std::cerr << "CLEARED" << std::endl;
 					m_threadData->hashCache.get_allocator().pool()->flush();
 
 					m_threadData->hashCacheClearCount = 0;
