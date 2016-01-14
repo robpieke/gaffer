@@ -38,6 +38,8 @@
 #ifndef GAFFERBINDINGS_VALUEPLUGBINDING_H
 #define GAFFERBINDINGS_VALUEPLUGBINDING_H
 
+#include "IECore/MurmurHash.h"
+
 #include "Gaffer/ValuePlug.h"
 #include "GafferBindings/PlugBinding.h"
 
@@ -45,6 +47,83 @@ namespace GafferBindings
 {
 
 void bindValuePlug();
+
+template<typename WrappedType>
+class ValuePlugWrapper : public PlugWrapper<WrappedType>
+{
+
+	public :
+
+		ValuePlugWrapper( PyObject *self, const std::string &name, Gaffer::Plug::Direction direction, unsigned flags )
+			:	PlugWrapper<WrappedType>( self, name, direction, flags )
+		{
+		}
+
+		ValuePlugWrapper( PyObject *self, const std::string &name, Gaffer::Plug::Direction direction,
+			IECore::ConstObjectPtr defaultValue, unsigned flags )
+			:	PlugWrapper<WrappedType>( self, name, direction, defaultValue, flags )
+		{
+		}
+
+		virtual void setFrom( const Gaffer::ValuePlug *other )
+		{
+			if( this->isSubclassed() )
+			{
+				IECorePython::ScopedGILLock gilLock;
+				boost::python::object f = this->methodOverride( "setFrom" );
+				if( f )
+				{
+					f( Gaffer::ValuePlugPtr( const_cast<Gaffer::ValuePlug *>( other ) ) );
+					return;
+				}
+			}
+			WrappedType::setFrom( other );
+		}
+
+		virtual void setToDefault()
+		{
+			if( this->isSubclassed() )
+			{
+				IECorePython::ScopedGILLock gilLock;
+				boost::python::object f = this->methodOverride( "setToDefault" );
+				if( f )
+				{
+					f();
+					return;
+				}
+			}
+			WrappedType::setToDefault();
+		}
+
+		virtual bool isSetToDefault() const
+		{
+			if( this->isSubclassed() )
+			{
+				IECorePython::ScopedGILLock gilLock;
+				boost::python::object f = this->methodOverride( "isSetToDefault" );
+				if( f )
+				{
+					return boost::python::extract<bool>( f() );
+				}
+			}
+			return WrappedType::isSetToDefault();
+		}
+
+		virtual IECore::MurmurHash hash() const
+		{
+			if( this->isSubclassed() )
+			{
+				IECorePython::ScopedGILLock gilLock;
+				boost::python::object f = this->methodOverride( "hash" );
+				if( f )
+				{
+					return boost::python::extract<IECore::MurmurHash>( f() );
+				}
+			}
+			return WrappedType::hash();
+		}
+
+};
 
 /// Supports the following Context variables :
 ///
