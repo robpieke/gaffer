@@ -55,10 +55,53 @@ using namespace IECore;
 using namespace Gaffer;
 using namespace GafferScene;
 
+namespace
+{
+
+const InternedString g_instanceIdContextName( "instancer:id" );
+
+int instanceIndex( const ScenePlug::ScenePath &branchPath )
+{
+	return boost::lexical_cast<int>( branchPath[1].value() );
+}
+
+class InstanceContext : public Context
+{
+
+	public :
+
+		InstanceContext( const Context *context )
+			:	Context( *context, Borrowed ), m_scope( this )
+		{
+		}
+
+		InstanceContext( const Context *context, const ScenePlug::ScenePath &branchPath )
+			:	Context( *context, Borrowed ), m_scope( this )
+		{
+			init( branchPath, instanceIndex( branchPath ) );
+		}
+
+		void init( const ScenePlug::ScenePath &branchPath, int instanceId )
+		{
+			m_instancePath.clear();
+			m_instancePath.insert( m_instancePath.end(), branchPath.begin() + 2, branchPath.end() );
+			set( ScenePlug::scenePathContextName, m_instancePath );
+
+			set( g_instanceIdContextName, instanceId );
+		}
+
+	private :
+
+		ScenePlug::ScenePath m_instancePath;
+		Context::Scope m_scope;
+
+};
+
+};
+
 IE_CORE_DEFINERUNTIMETYPED( Instancer );
 
 size_t Instancer::g_firstPlugIndex = 0;
-const InternedString g_instanceIdContextName( "instancer:id" );
 
 Instancer::Instancer( const std::string &name )
 	:	BranchCreator( name )
@@ -127,8 +170,7 @@ struct Instancer::BoundHash
 
 	void operator() ( const blocked_range<size_t> &r )
 	{
-		ContextPtr ic = new Context( *m_context, Context::Borrowed );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( m_context );
 
 		ScenePath branchChildPath( m_branchPath );
 		branchChildPath.push_back( InternedString() ); // where we'll place the instance index
@@ -136,7 +178,7 @@ struct Instancer::BoundHash
 		for( size_t i=r.begin(); i!=r.end(); ++i )
 		{
 			branchChildPath[branchChildPath.size()-1] = InternedString( i );
-			m_instancer->fillInstanceContext( ic.get(), branchChildPath, i );
+			ic.init( branchChildPath, i );
 			m_instancer->instancePlug()->boundPlug()->hash( m_hash );
 			// no need to hash transform of instance because we know all
 			// root transforms are identity.
@@ -192,8 +234,7 @@ void Instancer::hashBranchBound( const ScenePath &parentPath, const ScenePath &b
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		h = instancePlug()->boundPlug()->hash();
 	}
 }
@@ -213,8 +254,7 @@ struct Instancer::BoundUnion
 
 	void operator() ( const blocked_range<size_t> &r )
 	{
-		ContextPtr ic = new Context( *m_context, Context::Borrowed );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( m_context );
 
 		ScenePath branchChildPath( m_branchPath );
 		branchChildPath.push_back( InternedString() ); // where we'll place the instance index
@@ -222,7 +262,7 @@ struct Instancer::BoundUnion
 		for( size_t i=r.begin(); i!=r.end(); ++i )
 		{
 			branchChildPath[branchChildPath.size()-1] = InternedString( i );
-			m_instancer->fillInstanceContext( ic.get(), branchChildPath, i );
+			ic.init( branchChildPath, i );
 
 			Box3f branchChildBound = m_instancer->instancePlug()->boundPlug()->getValue();
 			branchChildBound = transform( branchChildBound, m_instancer->instanceTransform( m_p, i ) );
@@ -278,8 +318,7 @@ Imath::Box3f Instancer::computeBranchBound( const ScenePath &parentPath, const S
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		return instancePlug()->boundPlug()->getValue();
 	}
 }
@@ -300,8 +339,7 @@ void Instancer::hashBranchTransform( const ScenePath &parentPath, const ScenePat
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		h = instancePlug()->transformPlug()->hash();
 	}
 }
@@ -322,8 +360,7 @@ Imath::M44f Instancer::computeBranchTransform( const ScenePath &parentPath, cons
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		return instancePlug()->transformPlug()->getValue();
 	}
 }
@@ -337,8 +374,7 @@ void Instancer::hashBranchAttributes( const ScenePath &parentPath, const ScenePa
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		h = instancePlug()->attributesPlug()->hash();
 	}
 }
@@ -352,8 +388,7 @@ IECore::ConstCompoundObjectPtr Instancer::computeBranchAttributes( const ScenePa
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		return instancePlug()->attributesPlug()->getValue();
 	}
 }
@@ -367,8 +402,7 @@ void Instancer::hashBranchObject( const ScenePath &parentPath, const ScenePath &
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		h = instancePlug()->objectPlug()->hash();
 	}
 }
@@ -382,8 +416,7 @@ IECore::ConstObjectPtr Instancer::computeBranchObject( const ScenePath &parentPa
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		return instancePlug()->objectPlug()->getValue();
 	}
 }
@@ -405,8 +438,7 @@ void Instancer::hashBranchChildNames( const ScenePath &parentPath, const ScenePa
 	else
 	{
 		// "/name/..."
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		h = instancePlug()->childNamesPlug()->hash();
 	}
 }
@@ -447,8 +479,7 @@ IECore::ConstInternedStringVectorDataPtr Instancer::computeBranchChildNames( con
 	}
 	else
 	{
-		ContextPtr ic = instanceContext( context, branchPath );
-		Context::Scope scopedContext( ic.get() );
+		InstanceContext ic( context, branchPath );
 		return instancePlug()->childNamesPlug()->getValue();
 	}
 }
@@ -462,39 +493,6 @@ ConstV3fVectorDataPtr Instancer::sourcePoints( const ScenePath &parentPath ) con
 	}
 
 	return primitive->variableData<V3fVectorData>( "P" );
-}
-
-int Instancer::instanceIndex( const ScenePath &branchPath ) const
-{
-	return boost::lexical_cast<int>( branchPath[1].value() );
-}
-
-Gaffer::ContextPtr Instancer::instanceContext( const Gaffer::Context *parentContext, const ScenePath &branchPath ) const
-{
-	assert( branchPath.size() >= 2 );
-
-	ContextPtr result = new Context( *parentContext, Context::Borrowed );
-	fillInstanceContext( result.get(), branchPath );
-
-	return result;
-}
-
-void Instancer::fillInstanceContext( Gaffer::Context *instanceContext, const ScenePath &branchPath ) const
-{
-	assert( branchPath.size() >= 2 );
-
-	fillInstanceContext( instanceContext, branchPath, instanceIndex( branchPath ) );
-}
-
-void Instancer::fillInstanceContext( Gaffer::Context *instanceContext, const ScenePath &branchPath, int instanceId ) const
-{
-	assert( branchPath.size() >= 2 );
-
-	ScenePath instancePath;
-	instancePath.insert( instancePath.end(), branchPath.begin() + 2, branchPath.end() );
-	instanceContext->set( ScenePlug::scenePathContextName, instancePath );
-
-	instanceContext->set( g_instanceIdContextName, instanceId );
 }
 
 Imath::M44f Instancer::instanceTransform( const IECore::V3fVectorData *p, int instanceId ) const
