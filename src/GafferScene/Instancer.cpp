@@ -58,6 +58,7 @@ using namespace GafferScene;
 IE_CORE_DEFINERUNTIMETYPED( Instancer );
 
 size_t Instancer::g_firstPlugIndex = 0;
+const InternedString g_instanceIdContextName( "instancer:id" );
 
 Instancer::Instancer( const std::string &name )
 	:	BranchCreator( name )
@@ -493,7 +494,7 @@ void Instancer::fillInstanceContext( Gaffer::Context *instanceContext, const Sce
 	instancePath.insert( instancePath.end(), branchPath.begin() + 2, branchPath.end() );
 	instanceContext->set( ScenePlug::scenePathContextName, instancePath );
 
-	instanceContext->set( "instancer:id", instanceId );
+	instanceContext->set( g_instanceIdContextName, instanceId );
 }
 
 Imath::M44f Instancer::instanceTransform( const IECore::V3fVectorData *p, int instanceId ) const
