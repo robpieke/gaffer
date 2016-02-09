@@ -101,6 +101,7 @@
 #include "GafferSceneBindings/ParametersBinding.h"
 #include "GafferSceneBindings/PathMatcherDataPlugBinding.h"
 #include "GafferSceneBindings/MeshToPointsBinding.h"
+#include "GafferSceneBindings/PathMatcherPathFilterBinding.h"
 
 using namespace boost::python;
 using namespace GafferBindings;
@@ -184,5 +185,6 @@ BOOST_PYTHON_MODULE( _GafferScene )
 	bindParameters();
 	bindPathMatcherDataPlug();
 	bindMeshToPoints();
+	bindPathMatcherPathFilter();
 
 }
