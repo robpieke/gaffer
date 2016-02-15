@@ -254,13 +254,14 @@ IECore::MurmurHash Context::hash() const
 		/// them here.
 		// Using a hardcoded comparison of the first three characters because
 		// it's quicker than `string::compare( 0, 3, "ui:" )`.
-		const std::string &name = it->first.string();
-		if(	name.size() > 2 && name[0] == 'u' && name[1] == 'i' && name[2] == ':' )
+		//const std::string &name = it->first.string();
+		/*if(	name.size() > 2 && name[0] == 'u' && name[1] == 'i' && name[2] == ':' )
 		{
 			continue;
-		}
-		m_hash.append( (uint64_t)&name );
-		it->second.data->hash( m_hash );
+		}*/
+		//m_hash.append( (uint64_t)&name );
+		//it->second.data->hash( m_hash );
+		m_hash.append( it->second.h );
 	}
 	m_hashValid = true;
 	return m_hash;

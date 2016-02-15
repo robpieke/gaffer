@@ -139,6 +139,9 @@ void Context::set( const IECore::InternedString &name, const T &value )
 	Storage &s = m_map[name];
 	if( Accessor<T>().set( s, value ) )
 	{
+		s.h = IECore::MurmurHash();
+		s.h.append( (uint64_t)&name.string() );
+		s.data->hash( s.h );
 		m_hashValid = false;
 		if( m_changedSignal )
 		{

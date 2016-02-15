@@ -245,6 +245,7 @@ class Context : public IECore::RefCounted
 			// We reference the data with a raw pointer to avoid the compulsory
 			// overhead of an intrusive pointer.
 			const IECore::Data *data;
+			IECore::MurmurHash h;
 			// And use this ownership flag to tell us when we need to do explicit
 			// reference count management.
 			Ownership ownership;

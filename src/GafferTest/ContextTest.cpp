@@ -70,16 +70,17 @@ void GafferTest::testManyContexts()
 	// change a value or two, and then continue.
 
 	Timer t;
-	for( int i = 0; i < 100000; ++i )
+	for( int i = 0; i < 10000000; ++i )
 	{
 		ContextPtr tmp = new Context( *base, Context::Borrowed );
 		tmp->set( keys[i%numKeys], i );
 		GAFFERTEST_ASSERT( tmp->get<int>( keys[i%numKeys] ) == i );
-		GAFFERTEST_ASSERT( tmp->hash() != baseHash );
+		//GAFFERTEST_ASSERT( tmp->hash() != baseHash );
+		tmp->hash();
 	}
 
 	// uncomment to get timing information
-	//std::cerr << t.stop() << std::endl;
+	std::cerr << t.stop() << std::endl;
 }
 
 // Useful for assessing the performance of substitutions.
