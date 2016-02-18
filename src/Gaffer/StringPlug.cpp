@@ -41,6 +41,46 @@
 using namespace IECore;
 using namespace Gaffer;
 
+namespace
+{
+
+// Custom StringData derived class used to store
+// additional information about the value. We are
+// deliberately omitting a custom TypeId etc because
+// this is just a private class.
+/// \todo At some point we might also want to optionally
+/// store an InternedString and have a StringPlug::getInternedValue()
+/// method for those clients that could use it.
+class ValueData : public IECore::StringData
+{
+
+	public :
+
+		ValueData( const std::string &value )
+			:	StringData( value ), hasSubstitutions( Context::hasSubstitutions( value ) )
+		{
+		}
+
+		bool hasSubstitutions;
+
+	protected :
+
+		virtual void copyFrom( const Object *other, CopyContext *context )
+		{
+			StringData::copyFrom( other, context );
+			hasSubstitutions = static_cast<const ValueData *>( other )->hasSubstitutions;
+		}
+
+		virtual void load( LoadContextPtr context )
+		{
+			Data::load( context );
+			hasSubstitutions = Context::hasSubstitutions( readable() );
+		}
+
+};
+
+} // namespace
+
 IE_CORE_DEFINERUNTIMETYPED( StringPlug );
 
 StringPlug::StringPlug(
@@ -50,7 +90,7 @@ StringPlug::StringPlug(
 	unsigned flags,
 	unsigned substitutions
 )
-	:	ValuePlug( name, direction, new StringData( defaultValue ), flags ), m_substitutions( substitutions )
+	:	ValuePlug( name, direction, new ValueData( defaultValue ), flags ), m_substitutions( substitutions )
 {
 }
 
@@ -83,29 +123,26 @@ PlugPtr StringPlug::createCounterpart( const std::string &name, Direction direct
 
 const std::string &StringPlug::defaultValue() const
 {
-	return static_cast<const StringData *>( defaultObjectValue() )->readable();
+	return static_cast<const ValueData *>( defaultObjectValue() )->readable();
 }
 
 void StringPlug::setValue( const std::string &value )
 {
-	setObjectValue( new StringData( value ) );
+	setObjectValue( new ValueData( value ) );
 }
 
 std::string StringPlug::getValue( const IECore::MurmurHash *precomputedHash ) const
 {
 	IECore::ConstObjectPtr o = getObjectValue( precomputedHash );
-	const IECore::StringData *s = IECore::runTimeCast<const IECore::StringData>( o.get() );
-	if( !s )
-	{
-		throw IECore::Exception( "StringPlug::getObjectValue() didn't return StringData - is the hash being computed correctly?" );
-	}
+	const ValueData *s = static_cast<const ValueData *>( o.get() );
 
 	bool performSubstitution =
 		m_substitutions &&
 		direction()==Plug::In &&
 		inCompute() &&
 		Plug::getFlags( Plug::PerformsSubstitutions ) &&
-		Context::hasSubstitutions( s->readable() );
+		s->hasSubstitutions
+	;
 
 	return performSubstitution ? Context::current()->substitute( s->readable(), m_substitutions ) : s->readable();
 }
@@ -131,13 +168,9 @@ IECore::MurmurHash StringPlug::hash() const
 	if( performSubstitution )
 	{
 		IECore::ConstObjectPtr o = p->getObjectValue();
-		const IECore::StringData *s = IECore::runTimeCast<const IECore::StringData>( o.get() );
-		if( !s )
-		{
-			throw IECore::Exception( "StringPlug::getObjectValue() didn't return StringData - is the hash being computed correctly?" );
-		}
+		const ValueData *s = static_cast<const ValueData *>( o.get() );
 
-		if( Context::hasSubstitutions( s->readable() ) )
+		if( s->hasSubstitutions )
 		{
 			IECore::MurmurHash result;
 			result.append( Context::current()->substitute( s->readable(), m_substitutions ) );
