@@ -49,6 +49,7 @@
 
 #include "GafferScene/Preview/RendererAlgo.h"
 #include "GafferScene/Preview/InteractiveRender.h"
+#include "GafferScene/Private/IECoreScenePreview/QueueingRenderer.h"
 #include "GafferScene/SceneAlgo.h"
 #include "GafferScene/PathMatcherData.h"
 #include "GafferScene/SceneNode.h"
@@ -56,6 +57,7 @@
 using namespace std;
 using namespace Imath;
 using namespace IECore;
+using namespace IECoreScenePreview;
 using namespace Gaffer;
 using namespace GafferScene;
 using namespace GafferScene::Preview;
@@ -789,10 +791,11 @@ void InteractiveRender::update()
 
 	if( !m_renderer )
 	{
-		m_renderer = IECoreScenePreview::Renderer::create(
+		IECoreScenePreview::RendererPtr r = IECoreScenePreview::Renderer::create(
 			rendererPlug()->getValue(),
 			IECoreScenePreview::Renderer::Interactive
 		);
+		m_renderer = new QueueingRenderer( r );
 	}
 
 	// We need to pause to make edits, even if we want to

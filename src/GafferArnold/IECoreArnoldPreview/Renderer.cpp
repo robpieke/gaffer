@@ -398,6 +398,7 @@ class ArnoldObject : public IECoreScenePreview::Renderer::ObjectInterface
 
 		virtual ~ArnoldObject()
 		{
+			std::cerr << "~ArnoldObject" << std::endl;
 			if( m_node )
 			{
 				AiNodeDestroy( m_node );
@@ -541,10 +542,13 @@ class ArnoldRenderer : public IECoreScenePreview::Renderer
 				m_assFileName( fileName )
 		{
 			/// \todo Control with an option.
-			AiMsgSetConsoleFlags( AI_LOG_ALL );
+			//AiMsgSetConsoleFlags( AI_LOG_ALL );
 
 			AtNode *defaultShader = AiNode( "utility" );
 			AiNodeSetStr( defaultShader, "name", "ieCoreArnold:defaultShader" );
+
+			/// \todo Remove me.
+			AiNodeSetBool( AiUniverseGetOptions(), "skip_license_check", true );
 		}
 
 		virtual ~ArnoldRenderer()

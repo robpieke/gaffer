@@ -202,8 +202,10 @@ class InteractiveRenderTest( GafferSceneTest.SceneTestCase ) :
 		image = IECore.ImageDisplayDriver.storedImage( "myLovelySphere" )
 		self.assertAlmostEqual( self.__color4fAtUV( image, IECore.V2f( 0.5 ) ).r, 1, delta = 0.01 )
 
+		print "DISABLING"
 		s["s"]["enabled"].setValue( False )
 		time.sleep( 0.5 )
+		print "DISABLED"
 
 		image = IECore.ImageDisplayDriver.storedImage( "myLovelySphere" )
 		self.assertAlmostEqual( self.__color4fAtUV( image, IECore.V2f( 0.5 ) ).r, 0, delta = 0.01 )
