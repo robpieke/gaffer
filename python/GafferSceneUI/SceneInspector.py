@@ -676,6 +676,13 @@ class Inspector( object ) :
 		raise NotImplementedError
 
 	## Should return True if the Inspector's results
+	# can meaningfully be tracked back up through the
+	# node graph.
+	def supportsHistory( self ) :
+
+		return True
+
+	## Should return True if the Inspector's results
 	# may be inherited from parent locations - this will
 	# enable inheritance queries for the inspector.
 	def supportsInheritance( self ) :
@@ -765,7 +772,8 @@ class DiffRow( Row ) :
 
 	def __enter( self, widget ) :
 
-		GafferUI.Pointer.setCurrent( "contextMenu" )
+		if self.__inspector.supportsInheritance() or self.__inspector.supportsHistory() :
+			GafferUI.Pointer.setCurrent( "contextMenu" )
 
 	def __leave( self, widget ) :
 
@@ -798,12 +806,14 @@ class DiffRow( Row ) :
 			else :
 				labelSuffix = ""
 
-			m.append(
-				"/Show History" + labelSuffix,
-				{
-					"command" : IECore.curry( Gaffer.WeakMethod( self.__showHistory ), target ),
-				}
-			)
+			if self.__inspector.supportsHistory() :
+
+				m.append(
+					"/Show History" + labelSuffix,
+					{
+						"command" : IECore.curry( Gaffer.WeakMethod( self.__showHistory ), target ),
+					}
+				)
 
 			if self.__inspector.supportsInheritance() :
 
@@ -1259,6 +1269,10 @@ class __NodeSection( Section ) :
 
 			return "Node Name"
 
+		def supportsHistory( self ) :
+
+			return False
+
 		def __call__( self, target ) :
 
 			node = target.scene.node()
@@ -1290,6 +1304,10 @@ class __PathSection( Section ) :
 		def name( self ) :
 
 			return "Location"
+
+		def supportsHistory( self ) :
+
+			return False
 
 		def __call__( self, target ) :
 
