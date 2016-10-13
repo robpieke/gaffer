@@ -35,6 +35,7 @@
 ##########################################################################
 
 import Gaffer
+import GafferUI
 import GafferUITest
 import GafferScene
 import GafferSceneUI
@@ -72,6 +73,18 @@ class SceneInspectorTest( GafferUITest.TestCase ) :
 		self.assertEqual( inspector.getTargetPaths(), [ "/plane" ] )
 
 		self.assertRaises( Exception, inspector.setTargetPaths, [ "/too", "/many", "/paths" ] )
+
+	def testSideBySideDiff( self ) :
+
+		d = GafferSceneUI.SceneInspector.SideBySideDiff()
+		self.assertTrue( d.getFooter() is None )
+
+		footer = GafferUI.Label( "Footer" )
+		d.setFooter( footer )
+		self.assertTrue( d.getFooter() is footer )
+
+		d.setFooter( None )
+		self.assertTrue( d.getFooter() is None )
 
 if __name__ == "__main__":
 	unittest.main()

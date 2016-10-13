@@ -356,6 +356,20 @@ class SideBySideDiff( Diff ) :
 
 		return self.__grid[1,index]
 
+	def setFooter( self, widget ) :
+
+		if widget is None :
+			del self.__grid[0:2, 2]
+		else :
+			self.__grid.addChild(
+				widget,
+				index = ( slice( 0, 2 ), 2 ),
+			)
+
+	def getFooter( self ) :
+
+		return self.__grid[0, 2]
+
 	## Updates the UI to reflect the relationship between the values.
 	# If they are equal or if there is only one, then only the first
 	# frame is shown, with a default background colour. If there are
