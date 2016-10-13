@@ -1272,12 +1272,26 @@ class __NodeSection( Section ) :
 
 		with self._mainColumn() :
 			self.__row = DiffRow( self.__Inspector(), diffCreator = functools.partial( TextDiff, highlightDiffs = False ) )
+			with self.__row.listContainer() :
+				with GafferUI.Frame() as self.__hintFrame :
+					self.__hint = GafferUI.Label( "" )
+				self.__hintFrame._qtWidget().setObjectName( "gafferInfo" )
+				self.__hintFrame._qtWidget().setProperty( "gafferRounded", True )
 
 	def update( self, targets ) :
 
 		Section.update( self, targets )
 
 		self.__row.update( targets )
+
+		hint = ""
+		if not targets :
+			hint = "Select a node to inspect"
+		elif len( targets ) == 1 or targets[0].scene == targets[1].scene :
+			hint = "Select a second node to inspect differences"
+
+		self.__hintFrame.setVisible( bool( hint ) )
+		self.__hint.setText( "<small>{0}</small>".format( hint ) )
 
 	class __Inspector( Inspector ) :
 
@@ -1308,12 +1322,27 @@ class __PathSection( Section ) :
 
 		with self._mainColumn() :
 			self.__row = DiffRow( self.__Inspector(), functools.partial( TextDiff, highlightDiffs = False ) )
+			with self.__row.listContainer() :
+				with GafferUI.Frame() as self.__hintFrame :
+					self.__hint = GafferUI.Label( "" )
+				self.__hintFrame._qtWidget().setObjectName( "gafferInfo" )
+				self.__hintFrame._qtWidget().setProperty( "gafferRounded", True )
 
 	def update( self, targets ) :
 
 		Section.update( self, targets )
 
 		self.__row.update( targets )
+
+		paths = set( [ t.path for t in targets if t.path is not None ] )
+		hint = ""
+		if len( paths ) == 0 or paths == { "/" } :
+			hint = "Select a location to inspect"
+		elif len( paths ) == 1 and len( targets ) == 1 :
+			hint = "Select a second location to inspect differences"
+
+		self.__hintFrame.setVisible( bool( hint ) )
+		self.__hint.setText( "<small>{0}</small>".format( hint ) )
 
 	class __Inspector( Inspector ) :
 

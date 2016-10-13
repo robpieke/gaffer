@@ -977,6 +977,12 @@ _styleSheet = string.Template(
 
 	}
 
+	QFrame#gafferInfo {
+
+		background: solid rgba( 70, 184, 255, 25 );
+
+	}
+
 	QFrame#gafferLighter {
 
 		background: solid rgba( 255, 255, 255, 10 );
