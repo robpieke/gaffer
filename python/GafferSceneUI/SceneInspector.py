@@ -163,7 +163,7 @@ class SceneInspector( GafferUI.NodeSetEditor ) :
 
 			columns = {}
 			with mainColumn :
-				columns[None] = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, spacing = 8 )
+				columns[None] = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, spacing = 8, borderWidth = 5 )
 				tabbedContainer = GafferUI.TabbedContainer()
 
 			for registration in self.__sectionRegistrations :
