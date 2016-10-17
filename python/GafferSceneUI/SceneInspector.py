@@ -1298,42 +1298,39 @@ class __NodeSection( Section ) :
 		Section.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
-			self.__row = DiffRow( self.__Inspector(), diffCreator = functools.partial( TextDiff, highlightDiffs = False ) )
-			with self.__row.listContainer() :
-				with GafferUI.Frame() as self.__hintFrame :
-					self.__hint = GafferUI.Label( "" )
-				self.__hintFrame._qtWidget().setObjectName( "gafferInfo" )
-				self.__hintFrame._qtWidget().setProperty( "gafferRounded", True )
+			with Row().listContainer() :
+
+				label = GafferUI.Label(
+					"Node",
+					horizontalAlignment = GafferUI.Label.HorizontalAlignment.Right,
+				)
+				label._qtWidget().setFixedWidth( 150 )
+
+				self.__diff = SideBySideDiff()
+				for i in range( 0, 2 ) :
+					with self.__diff.frame( i ) :
+						GafferUI.NameLabel( None )
 
 	def update( self, targets ) :
 
 		Section.update( self, targets )
 
-		self.__row.update( targets )
+		values = [ target.scene.node() for target in targets ]
+		if len( values ) == 0 :
+			values.append( "Select a node to inspect" )
+		elif len( values ) == 1 :
+			values.append( "Select a second node to inspect differences" )
 
-		hint = ""
-		if not targets :
-			hint = "Select a node to inspect"
-		elif len( targets ) == 1 or targets[0].scene == targets[1].scene :
-			hint = "Select a second node to inspect differences"
+		self.__diff.update( values )
 
-		self.__hintFrame.setVisible( bool( hint ) )
-		self.__hint.setText( "<small>{0}</small>".format( hint ) )
-
-	class __Inspector( Inspector ) :
-
-		def name( self ) :
-
-			return "Node Name"
-
-		def supportsHistory( self ) :
-
-			return False
-
-		def __call__( self, target ) :
-
-			node = target.scene.node()
-			return node.relativeName( node.scriptNode() )
+		for index, value in enumerate( values ) :
+			widget = self.__diff.frame( index ).getChild()
+			if isinstance( value, Gaffer.Node ) :
+				widget.setFormatter( widget.defaultFormatter )
+				widget.setGraphComponent( value )
+			else :
+				widget.setFormatter( lambda x : value )
+				widget.setGraphComponent( None )
 
 SceneInspector.registerSection( __NodeSection, tab = None )
 
@@ -1348,42 +1345,35 @@ class __PathSection( LocationSection ) :
 		LocationSection.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
-			self.__row = DiffRow( self.__Inspector(), functools.partial( TextDiff, highlightDiffs = False ) )
-			with self.__row.listContainer() :
-				with GafferUI.Frame() as self.__hintFrame :
-					self.__hint = GafferUI.Label( "" )
-				self.__hintFrame._qtWidget().setObjectName( "gafferInfo" )
-				self.__hintFrame._qtWidget().setProperty( "gafferRounded", True )
+			with Row().listContainer() :
+
+				label = GafferUI.Label(
+					"Location",
+					horizontalAlignment = GafferUI.Label.HorizontalAlignment.Right,
+				)
+				label._qtWidget().setFixedWidth( 150 )
+
+				self.__diff = SideBySideDiff()
+				for i in range( 0, 2 ) :
+					with self.__diff.frame( i ) :
+						GafferUI.Label()
 
 	def update( self, targets ) :
 
 		LocationSection.update( self, targets )
 
-		self.__row.update( targets )
+		numValidPaths = len( set( [ t.path for t in targets if t.path is not None ] ) )
+		if numValidPaths == 0 :
+			labels = [ "Select a location to inspect" ]
+		else :
+			labels = [ t.path if t.path is not None else "Invalid" for t in targets ]
+			if numValidPaths == 1 and len( targets ) == 1 :
+				labels.append( "Select a second location to inspect differences" )
 
-		paths = set( [ t.path for t in targets if t.path is not None ] )
-		hint = ""
-		if len( paths ) == 0 or paths == { "/" } :
-			hint = "Select a location to inspect"
-		elif len( paths ) == 1 and len( targets ) == 1 :
-			hint = "Select a second location to inspect differences"
-
-		self.__hintFrame.setVisible( bool( hint ) )
-		self.__hint.setText( "<small>{0}</small>".format( hint ) )
-
-	class __Inspector( Inspector ) :
-
-		def name( self ) :
-
-			return "Location"
-
-		def supportsHistory( self ) :
-
-			return False
-
-		def __call__( self, target ) :
-
-			return target.path or "None"
+		self.__diff.update( labels )
+		for index, label in enumerate( labels ) :
+			widget = self.__diff.frame( index ).getChild()
+			widget.setText( label )
 
 SceneInspector.registerSection( __PathSection, tab = "Selection" )
 
