@@ -971,13 +971,13 @@ _styleSheet = string.Template(
 
 	}
 
-	QFrame#gafferDiffCommon {
+	QFrame#gafferDiffAB {
 
-		background: solid rgba( 170, 170, 170, 80 );
+		background: solid rgba( 170, 170, 170, 60 );
 
 	}
 
-	QFrame#gafferInfo {
+	QFrame#gafferDiffOther {
 
 		background: solid rgba( 70, 184, 255, 25 );
 
@@ -997,7 +997,7 @@ _styleSheet = string.Template(
 
 	}
 
-	QFrame[gafferHighlighted=\"true\"]#gafferDiffA, QFrame[gafferHighlighted=\"true\"]#gafferDiffB, QFrame[gafferHighlighted=\"true\"]#gafferDiffCommon {
+	QFrame[gafferHighlighted=\"true\"]#gafferDiffA, QFrame[gafferHighlighted=\"true\"]#gafferDiffB, QFrame[gafferHighlighted=\"true\"]#gafferDiffAB {
 		background-color: $brightColor;
 	}
 
