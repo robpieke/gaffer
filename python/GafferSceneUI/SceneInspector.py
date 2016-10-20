@@ -1378,9 +1378,11 @@ class __NodeSection( Section ) :
 			if isinstance( value, Gaffer.Node ) :
 				widget.setFormatter( lambda x : ".".join( [ n.getName() for n in x ] ) )
 				widget.setGraphComponent( value )
+				widget.setEnabled( True )
 			else :
 				widget.setFormatter( lambda x : value )
 				widget.setGraphComponent( None )
+				widget.setEnabled( False )
 
 SceneInspector.registerSection( __NodeSection, tab = None )
 
@@ -1423,6 +1425,11 @@ class __PathSection( LocationSection ) :
 				backgrounds = [ SideBySideDiff.Background.AB, SideBySideDiff.Background.Other ]
 
 		self.__diff.update( labels, backgrounds = backgrounds )
+
+		for i in range( 0, 2 ) :
+			self.__diff.getValueWidget( i ).setEnabled(
+				len( labels ) > i and labels[i].startswith( "/" )
+			)
 
 SceneInspector.registerSection( __PathSection, tab = "Selection" )
 
