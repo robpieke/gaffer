@@ -1531,29 +1531,31 @@ class __BoundSection( LocationSection ) :
 		LocationSection.__init__( self, collapsed = True, label = "Bounding box" )
 
 		with self._mainColumn() :
-			self.__localBoundRow = DiffRow( self.__Inspector() )
-			self.__worldBoundRow = DiffRow( self.__Inspector( world = True ), alternate = True )
+			self.__diffColumn = DiffColumn( self.__Inspector(), filterable=False )
 
 	def update( self, targets ) :
 
 		LocationSection.update( self, targets )
 
-		self.__localBoundRow.update( targets )
-		self.__worldBoundRow.update( targets )
+		self.__diffColumn.update( targets )
 
 	class __Inspector( Inspector ) :
 
-		def __init__( self, world=False ) :
+		def __init__( self, world=None ) :
 
 			self.__world = world
 
 		def name( self ) :
 
-			return "World" if self.__world else "Local"
+			return {
+				True : "World",
+				False : "Local",
+				None : ""
+			}.get( self.__world )
 
 		def __call__( self, target ) :
 
-			if target.path is None :
+			if target.path is None or self.__world is None :
 				return None
 
 			bound = target.bound()
@@ -1562,6 +1564,13 @@ class __BoundSection( LocationSection ) :
 				bound = bound.transform( transform )
 
 			return bound
+
+		def children( self, target ) :
+
+			if self.__world is not None or target.path is None :
+				return []
+
+			return [ self.__class__( w ) for w in [ False, True ] ]
 
 SceneInspector.registerSection( __BoundSection, tab = "Selection" )
 
