@@ -792,7 +792,9 @@ class DiffRow( Row ) :
 			self.__diffConnections = []
 			diffWidgets = [ diff.getValueWidget( 0 ), diff.getValueWidget( 1 ) ] if isinstance( diff, SideBySideDiff ) else [ diff ]
 			for diffWidget in diffWidgets :
-				self.__diffConnections.append( [
+				self.__diffConnections.extend( [
+					diffWidget.enterSignal().connect( Gaffer.WeakMethod( self.__enterDiff ) ),
+					diffWidget.leaveSignal().connect( Gaffer.WeakMethod( self.__leaveDiff ) ),
 					diffWidget.contextMenuSignal().connect( Gaffer.WeakMethod( self.__contextMenu ) ),
 				] )
 
@@ -833,6 +835,15 @@ class DiffRow( Row ) :
 	def __diff( self ) :
 
 		return self.listContainer()[1]
+
+	def __enterDiff( self, widget ) :
+
+		if self.__inspector.supportsInheritance() or self.__inspector.supportsHistory() :
+			GafferUI.Pointer.setCurrent( "contextMenu" )
+
+	def __leaveDiff( self, widget ) :
+
+		GafferUI.Pointer.setCurrent( None )
 
 	def __enter( self, widget ) :
 
