@@ -93,7 +93,7 @@ Gaffer.Metadata.registerPlugValue( GafferScene.Shader, "*", "nodule:color", __sh
 ## \todo Make this behaviour a part of the preferences.
 def __nodeDoubleClick( nodeGraph, node ) :
 
-	GafferUI.NodeEditor.acquire( node )
+	GafferUI.NodeEditor.acquire( node, floating = True )
 
 __nodeDoubleClickConnection = GafferUI.NodeGraph.nodeDoubleClickSignal().connect( __nodeDoubleClick )
 
