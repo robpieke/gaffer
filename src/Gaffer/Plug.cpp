@@ -901,6 +901,13 @@ void Plug::propagateDirtiness( Plug *plugToDirty )
 {
 	DirtyPropagationScope scope;
 	DirtyPlugs::local().insert( plugToDirty );
+	// Hack to "fix" ValuePlugTest.testInterleavedEditAndCompute.
+	// This works only because the ValuePlug cache is currently
+	// cleared in its entirety for any call to `dirty()`. It
+	// wouldn't work if we implemented per-plug clearing or if
+	// plugToDirty is not a ValuePlug, but affects a ValuePlug
+	// downstream.
+	plugToDirty->dirty();
 }
 
 void Plug::pushDirtyPropagationScope()
