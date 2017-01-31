@@ -626,6 +626,18 @@ class ValuePlugTest( GafferTest.TestCase ) :
 
 		self.failUnless( n["p"] is p )
 
+	def testInterleavedEditAndCompute( self ) :
+
+		n = GafferTest.StringInOutNode()
+
+		with Gaffer.DirtyPropagationScope() :
+
+			n["in"].setValue( "a" )
+			self.assertEqual( n["out"].getValue(), "a" )
+
+			n["in"].setValue( "b" )
+			self.assertEqual( n["out"].getValue(), "b" )
+
 	def setUp( self ) :
 
 		GafferTest.TestCase.setUp( self )
