@@ -131,6 +131,7 @@ from DownstreamIteratorTest import DownstreamIteratorTest
 from PerformanceMonitorTest import PerformanceMonitorTest
 from MetadataAlgoTest import MetadataAlgoTest
 from ContextMonitorTest import ContextMonitorTest
+from DirtyPropagationScopeTest import DirtyPropagationScopeTest
 
 if __name__ == "__main__":
 	import unittest
