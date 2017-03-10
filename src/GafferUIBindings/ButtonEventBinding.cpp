@@ -46,17 +46,10 @@ using namespace GafferUI;
 
 void GafferUIBindings::bindButtonEvent()
 {
-	scope s = class_<ButtonEvent, bases<ModifiableEvent> >( "ButtonEvent" )
-		.def( init<ButtonEvent::Buttons, ButtonEvent::Buttons>() )
-		.def( init<ButtonEvent::Buttons, ButtonEvent::Buttons, const IECore::LineSegment3f &>() )
-		.def( init<ButtonEvent::Buttons, ButtonEvent::Buttons, const IECore::LineSegment3f &, float>() )
-		.def( init<ButtonEvent::Buttons, ButtonEvent::Buttons, const IECore::LineSegment3f &, float, ModifiableEvent::Modifiers>() )
-		.def_readwrite( "button", &ButtonEvent::button )
-		.def_readwrite( "buttons", &ButtonEvent::buttons )
-		.def_readwrite( "line", &ButtonEvent::line )
-		.def_readwrite( "wheelRotation", &ButtonEvent::wheelRotation )
-	;
+	class_<ButtonEvent, bases<ModifiableEvent> > cls( "ButtonEvent" );
+	scope s = cls;
 
+	// Define enum first, so we can use it in the definition for __init__
 	enum_<ButtonEvent::Buttons>( "Buttons" )
 		.value( "None", ButtonEvent::None )
 		.value( "Left", ButtonEvent::Left )
@@ -67,4 +60,23 @@ void GafferUIBindings::bindButtonEvent()
 		.value( "LeftRight", ButtonEvent::LeftRight )
 		.value( "All", ButtonEvent::All )
 	;
+
+	cls
+		.def(
+			init<ButtonEvent::Buttons, ButtonEvent::Buttons, const IECore::LineSegment3f &, float, ModifiableEvent::Modifiers>(
+				(
+					arg( "button" ) = ButtonEvent::None,
+					arg( "buttons" ) = ButtonEvent::None,
+					arg( "line" ) = IECore::LineSegment3f(),
+					arg( "wheelRotation" ) = 0.0f,
+					arg( "modifiers" ) = ModifiableEvent::None
+				)
+			)
+		)
+		.def_readwrite( "button", &ButtonEvent::button )
+		.def_readwrite( "buttons", &ButtonEvent::buttons )
+		.def_readwrite( "line", &ButtonEvent::line )
+		.def_readwrite( "wheelRotation", &ButtonEvent::wheelRotation )
+	;
+
 }

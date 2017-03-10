@@ -68,13 +68,13 @@ struct ButtonEvent : public ModifiableEvent
 	};
 
 	ButtonEvent(
-		Buttons button_ = None,
-		Buttons buttons_ = None,
-		const IECore::LineSegment3f &Line=IECore::LineSegment3f(),
-		float w = 0.0f,
-		Modifiers m = ModifiableEvent::None
+		Buttons button = None,
+		Buttons buttons = None,
+		const IECore::LineSegment3f &line=IECore::LineSegment3f(),
+		float wheelRotation = 0.0f,
+		Modifiers modifiers = ModifiableEvent::None
 	)
-		:	ModifiableEvent( m ), button( button_ ), buttons( buttons_ ), line( Line ), wheelRotation( w )
+		:	ModifiableEvent( modifiers ), button( button ), buttons( buttons ), line( line ), wheelRotation( wheelRotation )
 	{
 	};
 
