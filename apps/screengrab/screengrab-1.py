@@ -151,6 +151,11 @@ class screengrab( Gaffer.Application ) :
 							description = "The names of nodes to frame in the NodeGraph.",
 							defaultValue = IECore.StringVectorData(),
 						),
+						IECore.StringParameter(
+							name = "contextMenu",
+							description = "The name of a node or plug to show a context menu for.",
+							defaultValue = "",
+						),
 					],
 				),
 
@@ -192,6 +197,12 @@ class screengrab( Gaffer.Application ) :
 					name = "delay",
 					description = "A delay between setting up the script and grabbing the image.",
 					defaultValue = 0,
+				),
+
+				IECore.StringParameter(
+					name = "highlightedMenuItem",
+					description = "The name of a menu item to highlight.",
+					defaultValue = "",
 				),
 
 			]
@@ -273,15 +284,10 @@ class screengrab( Gaffer.Application ) :
 
 			editors[0].reveal()
 
-		# Set up some default framing for the node graphs.
+		# Set up the NodeGraphs as requested.
 
 		self.__waitForIdle()
-
-		for nodeGraph in scriptWindow.getLayout().editors( GafferUI.NodeGraph ) :
-			if args["nodeGraph"]["frame"] :
-				nodeGraph.frame( [ script.descendant( n ) for n in args["nodeGraph"]["frame"] ] )
-			else :
-				nodeGraph.frame( script.children( Gaffer.Node ) )
+		self.__setupNodeGraphs( scriptWindow, args )
 
 		# Set up the NodeEditors as requested.
 
@@ -342,6 +348,11 @@ class screengrab( Gaffer.Application ) :
 		script.context()["ui:scene:expandedPaths"] = GafferScene.PathMatcherData( pathsToExpand )
 		script.context()["ui:scene:selectedPaths"] = args["scene"]["selectedPaths"]
 
+		# Highlight any menu item we've been asked to. This assumes
+		# that the menu has already been shown by something above.
+
+		self.__highlightMenuItem( args )
+
 		# Add a delay.
 
 		t = time.time() + args["delay"].value
@@ -383,5 +394,78 @@ class screengrab( Gaffer.Application ) :
 
 		GafferUI.EventLoop.addIdleCallback( f )
 		GafferUI.EventLoop.mainEventLoop().start()
+
+	def __setupNodeGraphs( self, scriptWindow, args ) :
+
+		script = scriptWindow.scriptNode()
+
+		nodeGraphs = scriptWindow.getLayout().editors( GafferUI.NodeGraph )
+		if not nodeGraphs :
+			return
+
+		for nodeGraph in nodeGraphs :
+			if args["nodeGraph"]["frame"] :
+				nodeGraph.frame( [ script.descendant( n ) for n in args["nodeGraph"]["frame"] ] )
+			else :
+				nodeGraph.frame( script.children( Gaffer.Node ) )
+
+		if args["nodeGraph"]["contextMenu"].value :
+
+			nodeGraph = nodeGraphs[0]
+			contextMenuTarget = script.descendant( args["nodeGraph"]["contextMenu"].value )
+			if isinstance( contextMenuTarget, Gaffer.Node ) :
+				gadget = nodeGraph.graphGadget().nodeGadget( contextMenuTarget )
+			else :
+				gadget = nodeGraph.graphGadget().nodeGadget( contextMenuTarget.node() ).nodule( contextMenuTarget )
+
+			viewport = nodeGraph.graphGadgetWidget().getViewportGadget()
+			position = viewport.gadgetToRasterSpace( gadget.bound().center(), gadget )
+			bound = nodeGraph.graphGadgetWidget().bound()
+
+			QtGui.QCursor.setPos(
+				bound.min.x + position.x,
+				bound.min.y + position.y
+			)
+			nodeGraph.graphGadgetWidget().buttonPressSignal()(
+				nodeGraph.graphGadgetWidget,
+				GafferUI.ButtonEvent(
+					button = GafferUI.ButtonEvent.Buttons.Right,
+					buttons = GafferUI.ButtonEvent.Buttons.Right,
+					line = IECore.LineSegment3f( IECore.V3f( position.x, position.y, 1 ), IECore.V3f( position.x, position.y, 0 ) )
+				)
+			)
+
+	def __highlightMenuItem( self, args ) :
+
+		if not args["highlightedMenuItem"].value :
+			return
+
+		def highlightAction( menu, text ) :
+
+			for action in menu.actions() :
+				if Gaffer.StringAlgo.match( str( action.text() ), text ) :
+					menu.setActiveAction( action )
+					QtGui.QCursor.setPos(
+				        w.mapToGlobal( menu.actionGeometry( action ).center() )
+					)
+					return True
+				actionMenu = action.menu()
+				if actionMenu is not None :
+					menu.setActiveAction( action )
+					if highlightAction( actionMenu, text ) :
+						return True
+
+			return False
+
+		for menu in [ w for w in QtGui.QApplication.topLevelWidgets() if isinstance( w, QtGui.QMenu ) ] :
+
+			if not menu.isVisible() :
+				continue
+
+			if highlightAction( menu, args["highlightedMenuItem"].value ) :
+				self.__waitForIdle()
+				return
+
+		raise ValueError( "Menu item not found" )
 
 IECore.registerRunTimeTyped( screengrab )
