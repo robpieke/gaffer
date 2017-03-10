@@ -28,7 +28,7 @@ Gaffer is shipped with the open source Appleseed renderer, ready to use with no 
 
 > Note :
 >
-> The examples below all assume your are installing Gaffer for **Linux**. For **OS X**, please
+> The examples below all assume you are installing Gaffer for **Linux**. For **OS X**, please
 > substitute `DYLD_LIBRARY_PATH` for all occurrences of `LD_LIBRARY_PATH`.
 
 ### 3delight
