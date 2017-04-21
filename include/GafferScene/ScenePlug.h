@@ -51,7 +51,7 @@ namespace GafferScene
 
 /// The ScenePlug is used to pass scenegraphs between nodes in the gaffer graph. It is a compound
 /// type, with subplugs for different aspects of the scene.
-class ScenePlug : public Gaffer::ValuePlug
+class ScenePlug : public Gaffer::Plug
 {
 
 	public :
@@ -59,7 +59,7 @@ class ScenePlug : public Gaffer::ValuePlug
 		ScenePlug( const std::string &name=defaultName<ScenePlug>(), Direction direction=In, unsigned flags=Default );
 		virtual ~ScenePlug();
 
-		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( GafferScene::ScenePlug, ScenePlugTypeId, ValuePlug );
+		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( GafferScene::ScenePlug, ScenePlugTypeId, Plug );
 
 		virtual bool acceptsChild( const Gaffer::GraphComponent *potentialChild ) const;
 		virtual Gaffer::PlugPtr createCounterpart( const std::string &name, Direction direction ) const;
