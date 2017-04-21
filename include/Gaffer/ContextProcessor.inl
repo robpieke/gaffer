@@ -128,24 +128,26 @@ void ContextProcessor<BaseType>::affects( const Plug *input, DependencyNode::Aff
 template<typename BaseType>
 void ContextProcessor<BaseType>::appendAffectedPlugs( DependencyNode::AffectedPlugsContainer &outputs ) const
 {
-	Node *n = const_cast<Node *>( static_cast<const Node *>( this ) );
-	for( OutputPlugIterator it( n ); !it.done(); ++it )
+	const static IECore::InternedString outName( "out" );
+	const Plug *outPlug = BaseType::template getChild<Plug>( outName );
+	if( !outPlug )
 	{
-		const ValuePlug *valuePlug = IECore::runTimeCast<const ValuePlug>( it->get() );
-		if( 0 == valuePlug->getName().string().compare( 0, 3, "out" ) && oppositePlug( valuePlug ) )
+		return;
+	}
+
+	if( outPlug->children().size() )
+	{
+		for( RecursiveValuePlugIterator cIt( outPlug ); !cIt.done(); ++cIt )
 		{
-			if( valuePlug->children().size() )
+			if( outPlug->children().empty() )
 			{
-				for( ValuePlugIterator cIt( valuePlug ); !cIt.done(); ++cIt )
-				{
-					outputs.push_back( cIt->get() );
-				}
-			}
-			else
-			{
-				outputs.push_back( valuePlug );
+				outputs.push_back( cIt->get() );
 			}
 		}
+	}
+	else if( const ValuePlug *v = IECore::runTimeCast<const ValuePlug>( outPlug ) )
+	{
+		outputs.push_back( v );
 	}
 }
 
@@ -196,12 +198,12 @@ void ContextProcessor<BaseType>::compute( ValuePlug *output, const Context *cont
 }
 
 template<typename BaseType>
-const ValuePlug *ContextProcessor<BaseType>::correspondingDescendant( const ValuePlug *plug, const ValuePlug *plugAncestor, const ValuePlug *oppositeAncestor )
+const GraphComponent *ContextProcessor<BaseType>::correspondingDescendant( const GraphComponent *descendant, const GraphComponent *ancestor, const GraphComponent *oppositeAncestor )
 {
 	// this method recursively computes oppositeAncestor->descendant( plug->relativeName( plugAncestor ) ).
 	// ie it finds the relative path from plugAncestor to plug, and follows it from oppositeAncestor.
 
-	if( plug == plugAncestor )
+	if( descendant == ancestor )
 	{
 		// we're already at plugAncestor, so the relative path has zero length
 		// and we can return oppositeAncestor:
@@ -212,24 +214,24 @@ const ValuePlug *ContextProcessor<BaseType>::correspondingDescendant( const Valu
 	// return its child with the same name as "plug" (if either of those things exist):
 
 	// get parent of this plug:
-	const ValuePlug *plugParent = plug->parent<ValuePlug>();
-	if( !plugParent )
+	const GraphComponent *parent = descendant->parent<GraphComponent>();
+	if( !parent )
 	{
-		// looks like the "plug" we initially called this function with wasn't
-		// a descendant of plugAncestor and we've recursed up into nothing, so
+		// looks like the "desdendant" we initially called this function with wasn't
+		// a descendant of ancestor and we've recursed up into nothing, so
 		// we return NULL:
 		return NULL;
 	}
 
 	// find the corresponding plug for the parent:
-	const ValuePlug *oppositeParent = correspondingDescendant( plugParent, plugAncestor, oppositeAncestor );
+	const GraphComponent *oppositeParent = correspondingDescendant( parent, ancestor, oppositeAncestor );
 	if( !oppositeParent )
 	{
 		return NULL;
 	}
 
 	// find the child corresponding to "plug"
-	return oppositeParent->getChild<ValuePlug>( plug->getName() );
+	return oppositeParent->getChild<GraphComponent>( descendant->getName() );
 }
 
 template<typename BaseType>
@@ -238,8 +240,8 @@ const ValuePlug *ContextProcessor<BaseType>::oppositePlug( const ValuePlug *plug
 	const static IECore::InternedString inName( "in" );
 	const static IECore::InternedString outName( "out" );
 
-	const ValuePlug *inPlug = BaseType::template getChild<ValuePlug>( inName );
-	const ValuePlug *outPlug = BaseType::template getChild<ValuePlug>( outName );
+	const Plug *inPlug = BaseType::template getChild<Plug>( inName );
+	const Plug *outPlug = BaseType::template getChild<Plug>( outName );
 
 	if( !( outPlug && inPlug ) )
 	{
@@ -248,11 +250,11 @@ const ValuePlug *ContextProcessor<BaseType>::oppositePlug( const ValuePlug *plug
 
 	if( plug->direction() == Plug::Out )
 	{
-		return correspondingDescendant( plug, outPlug, inPlug );
+		return IECore::runTimeCast<const ValuePlug>( correspondingDescendant( plug, outPlug, inPlug ) );
 	}
 	else
 	{
-		return correspondingDescendant( plug, inPlug, outPlug );
+		return IECore::runTimeCast<const ValuePlug>( correspondingDescendant( plug, inPlug, outPlug ) );
 	}
 }
 

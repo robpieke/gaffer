@@ -45,7 +45,8 @@ namespace Gaffer
 /// The ContextProcessor provides a base class to simplify the creation of nodes
 /// which evaluate their inputs using a modified context to that provided for the output
 /// evaluation - time warps being one good example. The ContextProcessor adds no plugs
-/// of it's own, but will automatically map all in* plugs to their out* equivalents.
+/// of it's own, but will automatically map any plug named "in" (and it's children) to the
+/// "out" equivalents.
 template<typename BaseType>
 class ContextProcessor : public BaseType
 {
@@ -84,7 +85,7 @@ class ContextProcessor : public BaseType
 
 	private :
 
-		static const ValuePlug *correspondingDescendant( const ValuePlug *plug, const ValuePlug *plugAncestor, const ValuePlug *oppositeAncestor );
+		static const GraphComponent *correspondingDescendant( const GraphComponent *descendant, const GraphComponent *ancestor, const GraphComponent *oppositeAncestor );
 
 		/// Returns the input corresponding to the output and vice versa.
 		const ValuePlug *oppositePlug( const ValuePlug *plug ) const;
