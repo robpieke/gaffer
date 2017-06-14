@@ -156,29 +156,6 @@ const Gaffer::BoolPlug *Grade::whiteClampPlug() const
 	return getChild<BoolPlug>( g_firstPlugIndex+8 );
 }
 
-bool Grade::channelEnabled( const std::string &channel ) const
-{
-	if ( !ChannelDataProcessor::channelEnabled( channel ) )
-	{
-		return false;
-	}
-
-	const int channelIndex = std::max( 0, ImageAlgo::colorIndex( channel ) );
-
-	// And don't bother to process identity transforms or invalid gammas
-	float a, b, gamma;
-	parameters( channelIndex, a, b, gamma );
-
-	if( gamma == 0.0f )
-	{
-		// this would result in division by zero,
-		// so it must disable processing.
-		return false;
-	}
-
-	return gamma != 1.0f || a != 1.0f || b != 0.0f;
-}
-
 void Grade::affects( const Gaffer::Plug *input, AffectedPlugsContainer &outputs ) const
 {
 	ChannelDataProcessor::affects( input, outputs );
@@ -214,32 +191,37 @@ void Grade::affects( const Gaffer::Plug *input, AffectedPlugsContainer &outputs 
 
 void Grade::hashChannelData( const GafferImage::ImagePlug *output, const Gaffer::Context *context, IECore::MurmurHash &h ) const
 {
-	ChannelDataProcessor::hashChannelData( output, context, h );
-
-	inPlug()->channelDataPlug()->hash( h );
-
 	const std::string &channelName = context->get<std::string>( ImagePlug::channelNameContextName );
 	const int channelIndex = std::max( 0, ImageAlgo::colorIndex( channelName ) );
-	
-	blackPointPlug()->getChild( channelIndex )->hash( h );
-	whitePointPlug()->getChild( channelIndex )->hash( h );
-	liftPlug()->getChild( channelIndex )->hash( h );
-	gainPlug()->getChild( channelIndex )->hash( h );
-	multiplyPlug()->getChild( channelIndex )->hash( h );
-	offsetPlug()->getChild( channelIndex )->hash( h );
-	gammaPlug()->getChild( channelIndex )->hash( h );
+
+	float a, b, gamma;
+	if( !parameters( channelIndex, a, b, gamma ) )
+	{
+		h = inPlug()->channelDataPlug()->hash();
+		return;
+	}
+
+	ChannelDataProcessor::hashChannelData( output, context, h );
+	inPlug()->channelDataPlug()->hash( h );
+	h.append( a );
+	h.append( b );
+	h.append( gamma );
+
 	blackClampPlug()->hash( h );
 	whiteClampPlug()->hash( h );
 }
 
 void Grade::processChannelData( const Gaffer::Context *context, const ImagePlug *parent, const std::string &channel, FloatVectorDataPtr outData ) const
 {
-	// Calculate the valid data window that we are to merge.
-	const int dataWidth = ImagePlug::tileSize()*ImagePlug::tileSize();
-
 	// Do some pre-processing.
 	float A, B, gamma;
-	parameters( std::max( 0, ImageAlgo::colorIndex( channel ) ), A, B, gamma );
+	if( !parameters( std::max( 0, ImageAlgo::colorIndex( channel ) ), A, B, gamma ) )
+	{
+		// AH! HERE IS THE PROBLEM!! WE NEED TO RETURN THE ORIGINAL CONST INPUT DATA,
+		// BUT IT HAS ALREADY BEEN COPIED!!!!!!
+	}
+
+
 	const float invGamma = 1. / gamma;
 	const bool whiteClamp = whiteClampPlug()->getValue();
 	const bool blackClamp = blackClampPlug()->getValue();
@@ -276,4 +258,13 @@ void Grade::parameters( size_t channelIndex, float &a, float &b, float &gamma ) 
 
 	a = multiply * ( gain - lift ) / ( whitePoint - blackPoint );
 	b = offset + lift - a * blackPoint;
+
+	if( gamma == 0.0f )
+	{
+		// This would result in division by zero,
+		// so it must disable processing.
+		return false;
+	}
+
+	return gamma != 1.0f || a != 1.0f || b != 0.0f;
 }

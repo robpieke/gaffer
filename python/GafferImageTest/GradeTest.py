@@ -148,6 +148,7 @@ class GradeTest( GafferImageTest.ImageTestCase ) :
 
 		s = Gaffer.ScriptNode()
 		s["c"] = GafferImage.Constant()
+		s["c"]["color"].setValue( IECore.Color4f( 0.25, 0.5, 0.75, 1 ) )
 		s["g"] = GafferImage.Grade()
 		s["g"]["in"].setInput( s["c"]["out"] )
 

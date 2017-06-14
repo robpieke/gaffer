@@ -88,14 +88,14 @@ class Grade : public ChannelDataProcessor
 
 	protected :
 
-		virtual bool channelEnabled( const std::string &channel ) const;
-
 		virtual void hashChannelData( const GafferImage::ImagePlug *output, const Gaffer::Context *context, IECore::MurmurHash &h ) const;
 		virtual void processChannelData( const Gaffer::Context *context, const ImagePlug *parent, const std::string &channelIndex, IECore::FloatVectorDataPtr outData ) const;
 
 	private :
 
-		void parameters( size_t channelIndex, float &a, float &b, float &gamma ) const;
+		// Returns true if the parameters would cause a change to the image,
+		// false otherwise.
+		bool parameters( size_t channelIndex, float &a, float &b, float &gamma ) const;
 
 		static size_t g_firstPlugIndex;
 
