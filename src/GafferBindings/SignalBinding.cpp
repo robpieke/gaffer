@@ -159,36 +159,6 @@ void bind( const char *name )
 
 }
 
-// If a boost::signal has a return type of void, it gets converted
-// to a return type of boost::signals::detail::unusable. We register
-// this converter so that we can accept a None return from a python
-// slot where boost::signals::detail::unusable is expected.
-struct UnusableFromNone
-{
-
-	UnusableFromNone()
-	{
-		boost::python::converter::registry::push_back(
-			&convertible,
-			&construct,
-			boost::python::type_id<boost::signals::detail::unusable>()
-		);
-	}
-
-	static void *convertible( PyObject *obj )
-	{
-		return obj == Py_None ? obj : NULL;
-	}
-
-	static void construct( PyObject *obj, boost::python::converter::rvalue_from_python_stage1_data *data )
-	{
-		void *storage = (( converter::rvalue_from_python_storage<boost::signals::detail::unusable>* ) data )->storage.bytes;
-		boost::signals::detail::unusable *unusable = new( storage ) boost::signals::detail::unusable();
-		data->convertible = unusable;
-	}
-
-};
-
 } // namespace
 
 namespace GafferBindings
@@ -197,7 +167,17 @@ namespace GafferBindings
 namespace Detail
 {
 
-boost::python::object pythonConnection( const boost::signals::connection &connection, bool scoped )
+template<>
+void extractSlotResult( boost::python::object o )
+{
+	if( o.ptr() != Py_None )
+	{
+		PyErr_SetString( PyExc_TypeError, "Expected None" );
+		throw_error_already_set();
+	}
+}
+
+boost::python::object pythonConnection( const boost::signals2::connection &connection, bool scoped )
 {
 	if( scoped )
 	{
@@ -233,8 +213,6 @@ void bindSignal()
 	bind<Signal1>( "Signal1" );
 	bind<Signal2>( "Signal2" );
 	bind<Signal3>( "Signal3" );
-
-	UnusableFromNone();
 
 }
 

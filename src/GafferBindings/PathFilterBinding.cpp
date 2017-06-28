@@ -104,10 +104,9 @@ list filter( PathFilter &f, list pythonPaths )
 
 struct ChangedSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, PathFilterPtr f )
+	void operator()( boost::python::object slot, PathFilterPtr f )
 	{
 		slot( f );
-		return boost::signals::detail::unusable();
 	}
 };
 

@@ -54,10 +54,9 @@ namespace
 
 struct RenderRequestSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, GadgetPtr g )
+	void operator()( boost::python::object slot, GadgetPtr g )
 	{
 		slot( g );
-		return boost::signals::detail::unusable();
 	}
 };
 
@@ -79,17 +78,15 @@ struct ButtonSlotCaller
 
 struct EnterLeaveSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, GadgetPtr g, const ButtonEvent &event )
+	void operator()( boost::python::object slot, GadgetPtr g, const ButtonEvent &event )
 	{
 		try
 		{
 			slot( g, event );
-			return boost::signals::detail::unusable();
 		}
 		catch( const boost::python::error_already_set &e )
 		{
 			PyErr_PrintEx( 0 ); // also clears the python error status
-			return boost::signals::detail::unusable();
 		}
 	}
 };
@@ -144,7 +141,7 @@ struct KeySlotCaller
 
 struct ExecuteOnUIThreadSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, Gadget::UIThreadFunction function )
+	void operator()( boost::python::object slot, Gadget::UIThreadFunction function )
 	{
 		object pythonFunction = make_function( function, default_call_policies(), boost::mpl::vector<void>() );
 		try
@@ -155,7 +152,6 @@ struct ExecuteOnUIThreadSlotCaller
 		{
 			ExceptionAlgo::translatePythonException();
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 

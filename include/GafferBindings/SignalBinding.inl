@@ -122,6 +122,18 @@ struct DefaultSignalCallerBase<4, Signal>
 	}
 };
 
+template<typename T>
+T extractSlotResult( boost::python::object o )
+{
+	return boost::python::extract<T>( o )();
+}
+
+// Specialised version of the above, because boost::python::extract<void>
+// doesn't work. Declared here but defined in SignalBinding.cpp to avoid
+// multiple symbol definition linking errors.
+template<>
+void extractSlotResult( boost::python::object o );
+
 template<int Arity, typename Signal>
 struct DefaultSlotCallerBase;
 
@@ -130,7 +142,7 @@ struct DefaultSlotCallerBase<0, Signal>
 {
 	typename Signal::slot_result_type operator()( boost::python::object slot )
 	{
-		return boost::python::extract<typename Signal::slot_result_type>( slot() )();
+		return extractSlotResult<typename Signal::slot_result_type>( slot() );
 	}
 };
 
@@ -143,7 +155,7 @@ struct DefaultSlotCallerBase<1, Signal>
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1 )
 #endif
 	{
-		return boost::python::extract<typename Signal::slot_result_type>( slot( a1 ) )();
+		return extractSlotResult<typename Signal::slot_result_type>( slot( a1 ) );
 	}
 };
 
@@ -156,7 +168,7 @@ struct DefaultSlotCallerBase<2, Signal>
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1, typename Signal::arg2_type a2 )
 #endif
 	{
-		return boost::python::extract<typename Signal::slot_result_type>( slot( a1, a2 ) )();
+		return extractSlotResult<typename Signal::slot_result_type>( slot( a1, a2 ) );
 	}
 };
 
@@ -169,7 +181,7 @@ struct DefaultSlotCallerBase<3, Signal>
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3 )
 #endif
 	{
-		return boost::python::extract<typename Signal::slot_result_type>( slot( a1, a2, a3 ) )();
+		return extractSlotResult<typename Signal::slot_result_type>( slot( a1, a2, a3 ) );
 	}
 };
 
@@ -182,7 +194,7 @@ struct DefaultSlotCallerBase<4, Signal>
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3, typename Signal::arg4_type a4 )
 #endif
 	{
-		return boost::python::extract<typename Signal::slot_result_type>( slot( a1, a2, a3, a4 ) )();
+		return extractSlotResult<typename Signal::slot_result_type>( slot( a1, a2, a3, a4 ) );
 	}
 };
 

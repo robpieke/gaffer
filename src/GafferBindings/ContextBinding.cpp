@@ -133,7 +133,7 @@ list names( const Context &context )
 
 struct ChangedSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, ConstContextPtr context, const IECore::InternedString &name )
+	void operator()( boost::python::object slot, ConstContextPtr context, const IECore::InternedString &name )
 	{
 		try
 		{
@@ -143,7 +143,6 @@ struct ChangedSlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 

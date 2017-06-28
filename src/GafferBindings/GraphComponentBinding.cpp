@@ -228,7 +228,7 @@ std::string repr( const GraphComponent *g )
 
 struct UnarySlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, GraphComponentPtr g )
+	void operator()( boost::python::object slot, GraphComponentPtr g )
 	{
 		try
 		{
@@ -238,14 +238,13 @@ struct UnarySlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 
 struct BinarySlotCaller
 {
 
-	boost::signals::detail::unusable operator()( boost::python::object slot, GraphComponentPtr g, GraphComponentPtr gg )
+	void operator()( boost::python::object slot, GraphComponentPtr g, GraphComponentPtr gg )
 	{
 		try
 		{
@@ -255,7 +254,6 @@ struct BinarySlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 

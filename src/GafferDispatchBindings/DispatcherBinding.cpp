@@ -292,7 +292,7 @@ struct PreDispatchSlotCaller
 
 struct PostDispatchSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, const Dispatcher *d, const std::vector<TaskNodePtr> &nodes, bool success )
+	void operator()( boost::python::object slot, const Dispatcher *d, const std::vector<TaskNodePtr> &nodes, bool success )
 	{
 		try
 		{
@@ -308,7 +308,6 @@ struct PostDispatchSlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 

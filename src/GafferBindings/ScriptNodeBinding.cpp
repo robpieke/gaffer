@@ -327,7 +327,7 @@ void deleteNodes( ScriptNode &s, Node *parent, const Set *filter, bool reconnect
 struct ActionSlotCaller
 {
 
-	boost::signals::detail::unusable operator()( boost::python::object slot, ScriptNodePtr script, ConstActionPtr action, Action::Stage stage )
+	void operator()( boost::python::object slot, ScriptNodePtr script, ConstActionPtr action, Action::Stage stage )
 	{
 		try
 		{
@@ -337,7 +337,6 @@ struct ActionSlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 
 };
@@ -345,7 +344,7 @@ struct ActionSlotCaller
 struct UndoAddedSlotCaller
 {
 
-	boost::signals::detail::unusable operator()( boost::python::object slot, ScriptNodePtr script )
+	void operator()( boost::python::object slot, ScriptNodePtr script )
 	{
 		try
 		{
@@ -355,7 +354,6 @@ struct UndoAddedSlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 
 };

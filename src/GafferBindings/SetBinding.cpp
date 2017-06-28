@@ -86,7 +86,7 @@ static boost::python::list getSlice( Set &s, boost::python::slice sl )
 struct MemberSignalSlotCaller
 {
 
-	boost::signals::detail::unusable operator()( boost::python::object slot, SetPtr s, Set::MemberPtr m )
+	void operator()( boost::python::object slot, SetPtr s, Set::MemberPtr m )
 	{
 		try
 		{
@@ -96,7 +96,6 @@ struct MemberSignalSlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 
 

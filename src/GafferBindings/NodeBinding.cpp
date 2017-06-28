@@ -53,7 +53,7 @@ namespace
 
 struct UnaryPlugSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, PlugPtr p )
+	void operator()( boost::python::object slot, PlugPtr p )
 	{
 		try
 		{
@@ -63,14 +63,13 @@ struct UnaryPlugSlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 
 struct BinaryPlugSlotCaller
 {
 
-	boost::signals::detail::unusable operator()( boost::python::object slot, PlugPtr p1, PlugPtr p2 )
+	void operator()( boost::python::object slot, PlugPtr p1, PlugPtr p2 )
 	{
 		try
 		{
@@ -80,13 +79,12 @@ struct BinaryPlugSlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 
 struct ErrorSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, const Plug *plug, const Plug *source, const std::string &error )
+	void operator()( boost::python::object slot, const Plug *plug, const Plug *source, const std::string &error )
 	{
 		try
 		{
@@ -96,7 +94,6 @@ struct ErrorSlotCaller
 		{
 			ExceptionAlgo::translatePythonException();
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 

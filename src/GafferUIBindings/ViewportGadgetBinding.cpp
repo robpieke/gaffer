@@ -78,7 +78,7 @@ list gadgetsAt( ViewportGadget &v, const Imath::V2f &position )
 
 struct UnarySlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, ViewportGadgetPtr g )
+	void operator()( boost::python::object slot, ViewportGadgetPtr g )
 	{
 		try
 		{
@@ -88,7 +88,6 @@ struct UnarySlotCaller
 		{
 			PyErr_PrintEx( 0 ); // clears the error status
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 

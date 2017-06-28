@@ -54,10 +54,9 @@ using namespace GafferUI;
 
 struct UnarySlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, StylePtr s )
+	void operator()( boost::python::object slot, StylePtr s )
 	{
 		slot( s );
-		return boost::signals::detail::unusable();
 	}
 };
 

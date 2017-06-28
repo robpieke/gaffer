@@ -52,7 +52,7 @@ namespace
 
 struct DriverCreatedSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, IECore::DisplayDriver *driver, const IECore::CompoundData *parameters )
+	void operator()( boost::python::object slot, IECore::DisplayDriver *driver, const IECore::CompoundData *parameters )
 	{
 		try
 		{
@@ -62,7 +62,6 @@ struct DriverCreatedSlotCaller
 		{
 			translatePythonException();
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 
@@ -101,7 +100,7 @@ struct GILReleaseUIThreadFunction
 
 struct ExecuteOnUIThreadSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, DisplayWrapper::UIThreadFunction function )
+	void operator()( boost::python::object slot, DisplayWrapper::UIThreadFunction function )
 	{
 		object pythonFunction = make_function( GILReleaseUIThreadFunction( function ), default_call_policies(), boost::mpl::vector<void>() );
 		try
@@ -112,7 +111,6 @@ struct ExecuteOnUIThreadSlotCaller
 		{
 			ExceptionAlgo::translatePythonException();
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 

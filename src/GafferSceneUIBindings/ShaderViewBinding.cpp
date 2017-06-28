@@ -146,18 +146,16 @@ boost::python::list registeredScenes( const IECore::InternedString &shaderPrefix
 
 struct SceneChangedSlotCaller
 {
-	boost::signals::detail::unusable operator()( boost::python::object slot, ShaderViewPtr v )
+	void operator()( boost::python::object slot, ShaderViewPtr v )
 	{
 		try
 		{
 			slot( v );
-			return boost::signals::detail::unusable();
 		}
 		catch( const boost::python::error_already_set &e )
 		{
 			ExceptionAlgo::translatePythonException();
 		}
-		return boost::signals::detail::unusable();
 	}
 };
 
