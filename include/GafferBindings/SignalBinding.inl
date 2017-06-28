@@ -72,7 +72,7 @@ struct DefaultSignalCallerBase<1, Signal>
 #if BOOST_VERSION < 103900
 	static typename Signal::result_type call( Signal &s, typename Signal::arg2_type a1 )
 #else
-	static typename Signal::result_type call( Signal &s, typename Signal::arg1_type a1 )
+	static typename Signal::result_type call( Signal &s, typename Signal::template arg<0>::type a1 )
 #endif
 	{
 		IECorePython::ScopedGILRelease gilRelease;
@@ -86,7 +86,7 @@ struct DefaultSignalCallerBase<2, Signal>
 #if BOOST_VERSION < 103900
 	static typename Signal::result_type call( Signal &s, typename Signal::arg2_type a1, typename Signal::arg3_type a2 )
 #else
-	static typename Signal::result_type call( Signal &s, typename Signal::arg1_type a1, typename Signal::arg2_type a2 )
+	static typename Signal::result_type call( Signal &s, typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2 )
 #endif
 	{
 		IECorePython::ScopedGILRelease gilRelease;
@@ -100,7 +100,7 @@ struct DefaultSignalCallerBase<3, Signal>
 #if BOOST_VERSION < 103900
 	static typename Signal::result_type call( Signal &s, typename Signal::arg2_type a1, typename Signal::arg3_type a2, typename Signal::arg4_type a3 )
 #else
-	static typename Signal::result_type call( Signal &s, typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3 )
+	static typename Signal::result_type call( Signal &s, typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2, typename Signal::template arg<2>::type a3 )
 #endif
 	{
 		IECorePython::ScopedGILRelease gilRelease;
@@ -114,7 +114,7 @@ struct DefaultSignalCallerBase<4, Signal>
 #if BOOST_VERSION < 103900
 	static typename Signal::result_type call( Signal &s, typename Signal::arg2_type a1, typename Signal::arg3_type a2, typename Signal::arg4_type a3, typename Signal::arg5_type a4 )
 #else
-	static typename Signal::result_type call( Signal &s, typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3, typename Signal::arg4_type a4 )
+	static typename Signal::result_type call( Signal &s, typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2, typename Signal::template arg<2>::type a3, typename Signal::template arg<3>::type a4 )
 #endif
 	{
 		IECorePython::ScopedGILRelease gilRelease;
@@ -152,7 +152,7 @@ struct DefaultSlotCallerBase<1, Signal>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg2_type a1 )
 #else
-	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1 )
+	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::template arg<0>::type a1 )
 #endif
 	{
 		return extractSlotResult<typename Signal::slot_result_type>( slot( a1 ) );
@@ -165,7 +165,7 @@ struct DefaultSlotCallerBase<2, Signal>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg2_type a1, typename Signal::arg3_type a2 )
 #else
-	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1, typename Signal::arg2_type a2 )
+	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2 )
 #endif
 	{
 		return extractSlotResult<typename Signal::slot_result_type>( slot( a1, a2 ) );
@@ -178,7 +178,7 @@ struct DefaultSlotCallerBase<3, Signal>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg2_type a1, typename Signal::arg3_type a2, typename Signal::arg4_type a3 )
 #else
-	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3 )
+	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2, typename Signal::template arg<2>::type a3 )
 #endif
 	{
 		return extractSlotResult<typename Signal::slot_result_type>( slot( a1, a2, a3 ) );
@@ -191,7 +191,7 @@ struct DefaultSlotCallerBase<4, Signal>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg2_type a1, typename Signal::arg3_type a2, typename Signal::arg4_type a3, typename Signal::arg5_type a4 )
 #else
-	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3, typename Signal::arg4_type a4 )
+	typename Signal::slot_result_type operator()( boost::python::object slot, typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2, typename Signal::template arg<2>::type a3, typename Signal::template arg<3>::type a4 )
 #endif
 	{
 		return extractSlotResult<typename Signal::slot_result_type>( slot( a1, a2, a3, a4 ) );
@@ -244,7 +244,7 @@ struct SlotBase<1, Signal, Caller>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( typename Signal::arg2_type a1 )
 #else
-	typename Signal::slot_result_type operator()( typename Signal::arg1_type a1 )
+	typename Signal::slot_result_type operator()( typename Signal::template arg<0>::type a1 )
 #endif
 	{
 		IECorePython::ScopedGILLock gilLock;
@@ -276,7 +276,7 @@ struct SlotBase<2, Signal, Caller>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( typename Signal::arg2_type a1, typename Signal::arg3_type a2 )
 #else
-	typename Signal::slot_result_type operator()( typename Signal::arg1_type a1, typename Signal::arg2_type a2 )
+	typename Signal::slot_result_type operator()( typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2 )
 #endif
 	{
 		IECorePython::ScopedGILLock gilLock;
@@ -308,7 +308,7 @@ struct SlotBase<3, Signal, Caller>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( typename Signal::arg2_type a1, typename Signal::arg3_type a2, typename Signal::arg4_type a3 )
 #else
-	typename Signal::slot_result_type operator()( typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3 )
+	typename Signal::slot_result_type operator()( typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2, typename Signal::template arg<2>::type a3 )
 #endif
 	{
 		IECorePython::ScopedGILLock gilLock;
@@ -340,7 +340,7 @@ struct SlotBase<4, Signal, Caller>
 #if BOOST_VERSION < 103900
 	typename Signal::slot_result_type operator()( typename Signal::arg2_type a1, typename Signal::arg3_type a2, typename Signal::arg4_type a3, typename Signal::arg5_type a4 )
 #else
-	typename Signal::slot_result_type operator()( typename Signal::arg1_type a1, typename Signal::arg2_type a2, typename Signal::arg3_type a3, typename Signal::arg4_type a4 )
+	typename Signal::slot_result_type operator()( typename Signal::template arg<0>::type a1, typename Signal::template arg<1>::type a2, typename Signal::template arg<2>::type a3, typename Signal::template arg<3>::type a4 )
 #endif
 	{
 		IECorePython::ScopedGILLock gilLock;
