@@ -36,7 +36,7 @@
 
 #include <set>
 
-#include "openvdb/openvdb.h"
+//#include "openvdb/openvdb.h"
 
 #include "IECore/ExternalProcedural.h"
 #include "IECore/CompoundData.h"
@@ -59,7 +59,7 @@ using namespace GafferArnold;
 namespace
 {
 
-Box3f boundAndAutoStepSize( const std::string &fileName, const std::set<std::string> &sets, float &autoStepSize )
+/*Box3f boundAndAutoStepSize( const std::string &fileName, const std::set<std::string> &sets, float &autoStepSize )
 {
 	openvdb::initialize();
 	openvdb::io::File file( fileName );
@@ -88,7 +88,7 @@ Box3f boundAndAutoStepSize( const std::string &fileName, const std::set<std::str
 		V3f( result.min().x(), result.min().y(), result.min().z() ),
 		V3f( result.max().x(), result.max().y(), result.max().z() )
 	);
-}
+}*/
 
 } // namespace
 
@@ -248,7 +248,7 @@ IECore::ConstObjectPtr ArnoldVDB::computeSource( const Context *context ) const
 	allGrids.insert( grids->readable().begin(), grids->readable().end() );
 	allGrids.insert( velocityGrids->readable().begin(), velocityGrids->readable().end() );
 
-	float autoStepSize = 0;
+	/*float autoStepSize = 0;
 	const Box3f bound = boundAndAutoStepSize( fileName, allGrids, autoStepSize );
 
 	result->setBound( bound );
@@ -257,7 +257,7 @@ IECore::ConstObjectPtr ArnoldVDB::computeSource( const Context *context ) const
 	const float stepScale = stepScalePlug()->getValue();
 	parameters["step_size"] = new FloatData(
 		( stepSize <= 0.0f ? autoStepSize : stepSize ) * stepScale
-	);
+	);*/
 
 	return result;
 }
