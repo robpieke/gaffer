@@ -59,7 +59,7 @@ class ViewportGadget : public Gadget
 
 	public :
 
-		typedef boost::signal<void (ViewportGadget *)> UnarySignal;
+		typedef boost::signals2::signal<void (ViewportGadget *)> UnarySignal;
 
 		ViewportGadget( GadgetPtr primaryChild = NULL );
 		virtual ~ViewportGadget();

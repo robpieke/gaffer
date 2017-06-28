@@ -76,7 +76,7 @@ class GraphGadget : public ContainerGadget
 		Gaffer::Node *getRoot();
 		const Gaffer::Node *getRoot() const;
 		void setRoot( Gaffer::NodePtr root, Gaffer::SetPtr filter = NULL );
-		typedef boost::signal<void ( GraphGadget *, Gaffer::Node * )> RootChangedSignal;
+		typedef boost::signals2::signal<void ( GraphGadget *, Gaffer::Node * )> RootChangedSignal;
 		/// A signal emitted when the root has been changed - the signature
 		/// of the signal is ( graphGadget, previousRoot ).
 		RootChangedSignal &rootChangedSignal();
@@ -243,6 +243,8 @@ class GraphGadget : public ContainerGadget
 
 		struct NodeGadgetEntry
 		{
+			NodeGadgetEntry() : gadget( NULL ) {};
+			NodeGadgetEntry( const NodeGadgetEntry &other ) : gadget( other.gadget ) {};
 			NodeGadget *gadget;
 			boost::signals2::scoped_connection inputChangedConnection;
 			boost::signals2::scoped_connection plugSetConnection;

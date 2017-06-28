@@ -72,7 +72,7 @@ class PathFilter : public IECore::RunTimeTyped
 
 		void filter( std::vector<PathPtr> &paths ) const;
 
-		typedef boost::signal<void ( PathFilter * )> ChangedSignal;
+		typedef boost::signals2::signal<void ( PathFilter * )> ChangedSignal;
 		ChangedSignal &changedSignal();
 
 	protected :

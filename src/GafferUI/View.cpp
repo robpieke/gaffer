@@ -112,7 +112,7 @@ void View::contextChanged( const IECore::InternedString &name )
 {
 }
 
-boost::signals::connection &View::contextChangedConnection()
+boost::signals2::connection &View::contextChangedConnection()
 {
 	return m_contextChangedConnection;
 }

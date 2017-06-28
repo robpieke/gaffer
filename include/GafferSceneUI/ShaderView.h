@@ -64,7 +64,7 @@ class ShaderView : public GafferImageUI::ImageView
 		Gaffer::Node *scene();
 		const Gaffer::Node *scene() const;
 
-		typedef boost::signal<void ( ShaderView * )> SceneChangedSignal;
+		typedef boost::signals2::signal<void ( ShaderView * )> SceneChangedSignal;
 		SceneChangedSignal &sceneChangedSignal();
 
 		virtual void setContext( Gaffer::ContextPtr context );

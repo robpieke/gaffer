@@ -135,7 +135,7 @@ class CropWindowTool::Rectangle : public GafferUI::Gadget
 			return m_masked;
 		}
 
-		typedef boost::signal<void ( Rectangle *, RectangleChangedReason )> UnarySignal;
+		typedef boost::signals2::signal<void ( Rectangle *, RectangleChangedReason )> UnarySignal;
 		UnarySignal &rectangleChangedSignal()
 		{
 			return m_rectangleChangedSignal;

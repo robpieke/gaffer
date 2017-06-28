@@ -108,7 +108,7 @@ class RenderableGadget : public Gadget
 		void setSelection( const std::set<std::string> &selection );
 		/// A signal emitted when the selection has changed, either through
 		/// a call to setSelection() or through user action.
-		typedef boost::signal<void ( RenderableGadgetPtr )> SelectionChangedSignal;
+		typedef boost::signals2::signal<void ( RenderableGadgetPtr )> SelectionChangedSignal;
 		SelectionChangedSignal &selectionChangedSignal();
 		/// Returns the bounding box of all the selected objects.
 		Imath::Box3f selectionBound() const;

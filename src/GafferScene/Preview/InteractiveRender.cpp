@@ -36,6 +36,7 @@
 
 #include "boost/bind.hpp"
 #include "boost/algorithm/string/predicate.hpp"
+#include "boost/make_shared.hpp"
 
 #include "tbb/task.h"
 

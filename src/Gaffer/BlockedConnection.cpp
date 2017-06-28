@@ -39,19 +39,13 @@
 using namespace Gaffer;
 
 BlockedConnection::BlockedConnection( boost::signals2::connection &connection, bool block )
-	:	m_connection( 0 )
 {
 	if( block && connection.connected() )
 	{
-		m_connection = &connection;
-		m_connection->block();
+		m_block = boost::signals2::shared_connection_block( connection );
 	}
 }
 
 BlockedConnection::~BlockedConnection()
 {
-	if( m_connection )
-	{
-		m_connection->unblock();
-	}
 }

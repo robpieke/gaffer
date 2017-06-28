@@ -40,7 +40,7 @@
 
 #include "GafferBindings/ConnectionBinding.h"
 
-using namespace boost::signals;
+using namespace boost::signals2;
 using namespace boost::python;
 using namespace GafferBindings;
 
@@ -50,12 +50,10 @@ void GafferBindings::bindConnection()
 	class_<connection>( "Connection", no_init )
 		.def( "disconnect", &connection::disconnect )
 		.def( "connected", &connection::connected )
-		.def( "block", &connection::block, ( arg( "should_block" ) = true ) )
-		.def( "unblock", &connection::unblock )
 		.def( "blocked", &connection::blocked )
 	;
 
-	class_<scoped_connection, bases<connection> >( "ScopedConnection", no_init )
+	class_<scoped_connection, bases<connection>, boost::noncopyable >( "ScopedConnection", no_init )
 		.def( init<const connection &>() )
 	;
 

@@ -104,8 +104,8 @@ class Dispatcher : public Gaffer::Node
 
 		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( GafferDispatch::Dispatcher, DispatcherTypeId, Gaffer::Node );
 
-		typedef boost::signal<bool (const Dispatcher *, const std::vector<TaskNodePtr> &), Detail::PreDispatchSignalCombiner> PreDispatchSignal;
-		typedef boost::signal<void (const Dispatcher *, const std::vector<TaskNodePtr> &, bool)> PostDispatchSignal;
+		typedef boost::signals2::signal<bool (const Dispatcher *, const std::vector<TaskNodePtr> &), Detail::PreDispatchSignalCombiner> PreDispatchSignal;
+		typedef boost::signals2::signal<void (const Dispatcher *, const std::vector<TaskNodePtr> &, bool)> PostDispatchSignal;
 
 		//! @name Dispatch Signals
 		/// These signals are emitted on dispatch events for any registered Dispatcher instance.

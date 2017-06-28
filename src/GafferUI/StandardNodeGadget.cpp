@@ -144,8 +144,10 @@ class StandardNodeGadget::ErrorGadget : public Gadget
 
 		struct PlugEntry
 		{
+			PlugEntry() {};
+			PlugEntry( const PlugEntry &other ) : error( other.error ) {};
 			std::string error;
-			boost::signals::scoped_connection parentChangedConnection;
+			boost::signals2::scoped_connection parentChangedConnection;
 		};
 
 		typedef std::map<ConstPlugPtr, PlugEntry> PlugErrors;

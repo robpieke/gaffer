@@ -77,7 +77,7 @@ class Pointer : public IECore::RefCounted
 		static void registerPointer( const std::string &name, ConstPointerPtr pointer );
 
 		/// A signal emitted whenever the pointer is changed.
-		typedef boost::signal<void ()> ChangedSignal;
+		typedef boost::signals2::signal<void ()> ChangedSignal;
 		static ChangedSignal &changedSignal();
 
 	private :

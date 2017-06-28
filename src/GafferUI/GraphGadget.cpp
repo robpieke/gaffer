@@ -226,8 +226,8 @@ void GraphGadget::setFilter( Gaffer::SetPtr filter )
 	}
 	else
 	{
-		m_filterMemberAddedConnection = boost::signals::connection();
-		m_filterMemberRemovedConnection = boost::signals::connection();
+		m_filterMemberAddedConnection = boost::signals2::connection();
+		m_filterMemberRemovedConnection = boost::signals2::connection();
 	}
 
 	updateGraph();

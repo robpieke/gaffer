@@ -37,6 +37,7 @@
 #include "boost/bind.hpp"
 #include "boost/unordered_map.hpp"
 #include "boost/algorithm/string/predicate.hpp"
+#include "boost/make_shared.hpp"
 
 #include "tbb/spin_mutex.h"
 

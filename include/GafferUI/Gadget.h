@@ -124,7 +124,7 @@ class Gadget : public Gaffer::GraphComponent
 		/// Returns true if this Gadget and all its parents up to the specified
 		/// ancestor are visible.
 		bool visible( Gadget *relativeTo = NULL ) const;
-		typedef boost::signal<void ( Gadget * )> VisibilityChangedSignal;
+		typedef boost::signals2::signal<void ( Gadget * )> VisibilityChangedSignal;
 		/// Emitted when the result of `Gadget::visible()` changes.
 		VisibilityChangedSignal &visibilityChangedSignal();
 		/// Sets whether or not this Gadget is enabled. Disabled gadgets
@@ -179,7 +179,7 @@ class Gadget : public Gaffer::GraphComponent
 		Imath::Box3f transformedBound() const;
 		/// The bounding box transformed by the result of fullTransform( ancestor ).
 		Imath::Box3f transformedBound( const Gadget *ancestor ) const;
-		typedef boost::signal<void ( Gadget * )> RenderRequestSignal;
+		typedef boost::signals2::signal<void ( Gadget * )> RenderRequestSignal;
 		RenderRequestSignal &renderRequestSignal();
 		//@}
 
@@ -205,7 +205,7 @@ class Gadget : public Gaffer::GraphComponent
 		////////////////////////////////////////////////////////////////////
 		//@{
 		/// A signal used to represent button related events.
-		typedef boost::signal<bool ( Gadget *, const ButtonEvent &event ), EventSignalCombiner<bool> > ButtonSignal;
+		typedef boost::signals2::signal<bool ( Gadget *, const ButtonEvent &event ), EventSignalCombiner<bool> > ButtonSignal;
 		/// The signal triggered by a button press event.
 		ButtonSignal &buttonPressSignal();
 		/// The signal triggered by a button release event.
@@ -215,7 +215,7 @@ class Gadget : public Gaffer::GraphComponent
 		/// The signal triggered by the mouse wheel.
 		ButtonSignal &wheelSignal();
 
-		typedef boost::signal<void ( Gadget *, const ButtonEvent &event )> EnterLeaveSignal;
+		typedef boost::signals2::signal<void ( Gadget *, const ButtonEvent &event )> EnterLeaveSignal;
 		/// The signal triggered when the mouse enters the Gadget.
 		EnterLeaveSignal &enterSignal();
 		/// The signal triggered when the mouse leaves the Gadget.
@@ -223,8 +223,8 @@ class Gadget : public Gaffer::GraphComponent
 		/// A signal emitted whenever the mouse moves within a Gadget.
 		ButtonSignal &mouseMoveSignal();
 
-		typedef boost::signal<IECore::RunTimeTypedPtr ( Gadget *, const DragDropEvent &event ), EventSignalCombiner<IECore::RunTimeTypedPtr> > DragBeginSignal;
-		typedef boost::signal<bool ( Gadget *, const DragDropEvent &event ), EventSignalCombiner<bool> > DragDropSignal;
+		typedef boost::signals2::signal<IECore::RunTimeTypedPtr ( Gadget *, const DragDropEvent &event ), EventSignalCombiner<IECore::RunTimeTypedPtr> > DragBeginSignal;
+		typedef boost::signals2::signal<bool ( Gadget *, const DragDropEvent &event ), EventSignalCombiner<bool> > DragDropSignal;
 
 		/// This signal is emitted if a previous buttonPressSignal() returned true, and the
 		/// user has subsequently moved the mouse with the button down. To initiate a drag
@@ -247,7 +247,7 @@ class Gadget : public Gaffer::GraphComponent
 
 		/// A signal used to represent key related events.
 		/// \todo We need some sort of focus model to say who gets the events.
-		typedef boost::signal<bool ( Gadget *, const KeyEvent &key ), EventSignalCombiner<bool> > KeySignal;
+		typedef boost::signals2::signal<bool ( Gadget *, const KeyEvent &key ), EventSignalCombiner<bool> > KeySignal;
 		/// The signal triggered by a key press event.
 		KeySignal &keyPressSignal();
 		/// The signal triggered by a key release event.
@@ -256,7 +256,7 @@ class Gadget : public Gaffer::GraphComponent
 		/// A signal emitted when the host event loop is idle. Connections
 		/// to this should be limited in duration because idle events consume
 		/// CPU when the program would otherwise be inactive.
-		typedef boost::signal<void ()> IdleSignal;
+		typedef boost::signals2::signal<void ()> IdleSignal;
 		static IdleSignal &idleSignal();
 		//@}
 
@@ -332,7 +332,7 @@ class Gadget : public Gaffer::GraphComponent
 		/// \todo I suspect that soon we'll have a Qt dependency in the C++
 		/// half of GafferUI, at which point it'd make more sense to implement
 		/// EventLoop in C++ rather than to implement this in such an awkward way.
-		typedef boost::signal<void ( UIThreadFunction )> ExecuteOnUIThreadSignal;
+		typedef boost::signals2::signal<void ( UIThreadFunction )> ExecuteOnUIThreadSignal;
 		static ExecuteOnUIThreadSignal &executeOnUIThreadSignal();
 };
 

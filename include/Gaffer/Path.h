@@ -121,7 +121,7 @@ class Path : public IECore::RunTimeTyped
 		PathFilter *getFilter();
 		const PathFilter *getFilter() const;
 
-		typedef boost::signal<void ( Path *path )> PathChangedSignal;
+		typedef boost::signals2::signal<void ( Path *path )> PathChangedSignal;
 		PathChangedSignal &pathChangedSignal();
 
 		/// Sets the path root and names from the other

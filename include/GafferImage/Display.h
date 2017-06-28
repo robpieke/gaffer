@@ -76,7 +76,7 @@ class Display : public ImageNode
 		/// Emitted when a new driver has been created. This can
 		/// then be passed to `Display::setDriver()` to populate
 		/// a Display with an incoming image.
-		typedef boost::signal<void ( IECore::DisplayDriver *driver, const IECore::CompoundData *parameters )> DriverCreatedSignal;
+		typedef boost::signals2::signal<void ( IECore::DisplayDriver *driver, const IECore::CompoundData *parameters )> DriverCreatedSignal;
 		static DriverCreatedSignal &driverCreatedSignal();
 
 		/// Emitted when a new bucket is received.
@@ -111,7 +111,7 @@ class Display : public ImageNode
 
 		// Signal used to request the execution of a function on the UI thread.
 		// We service these requests in DisplayUI.py.
-		typedef boost::signal<void ( UIThreadFunction )> ExecuteOnUIThreadSignal;
+		typedef boost::signals2::signal<void ( UIThreadFunction )> ExecuteOnUIThreadSignal;
 		static ExecuteOnUIThreadSignal &executeOnUIThreadSignal();
 
 	private :

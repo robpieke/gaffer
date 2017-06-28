@@ -40,6 +40,7 @@
 #include "boost/lexical_cast.hpp"
 #include "boost/multi_array.hpp"
 #include "boost/shared_ptr.hpp"
+#include "boost/make_shared.hpp"
 
 #include "IECore/LRUCache.h"
 #include "IECore/DisplayDriverServer.h"
@@ -242,13 +243,13 @@ class GafferDisplayDriver : public IECore::DisplayDriver
 			}
 		}
 
-		typedef boost::signal<void ( GafferDisplayDriver *, const Imath::Box2i & )> DataReceivedSignal;
+		typedef boost::signals2::signal<void ( GafferDisplayDriver *, const Imath::Box2i & )> DataReceivedSignal;
 		DataReceivedSignal &dataReceivedSignal()
 		{
 			return m_dataReceivedSignal;
 		}
 
-		typedef boost::signal<void ( GafferDisplayDriver * )> ImageReceivedSignal;
+		typedef boost::signals2::signal<void ( GafferDisplayDriver * )> ImageReceivedSignal;
 		ImageReceivedSignal &imageReceivedSignal()
 		{
 			return m_imageReceivedSignal;

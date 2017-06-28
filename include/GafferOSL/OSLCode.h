@@ -64,7 +64,7 @@ class OSLCode : public OSLShader
 		/// to give to it.
 		std::string source( const std::string shaderName = "" ) const;
 
-		typedef boost::signal<void ()> ShaderCompiledSignal;
+		typedef boost::signals2::signal<void ()> ShaderCompiledSignal;
 		/// Signal emitted when a shader is compiled successfully.
 		/// \todo This exists only so the UI knows when to clear
 		/// the error indicator. When we compile shaders on demand,

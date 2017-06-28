@@ -80,7 +80,7 @@ class SceneProcedural : public IECore::Renderer::Procedural
 		virtual Imath::Box3f bound() const;
 		virtual void render( IECore::Renderer *renderer ) const;
 
-		typedef boost::signal<void ( void )> AllRenderedSignal;
+		typedef boost::signals2::signal<void ( void )> AllRenderedSignal;
 
 		/// A signal emitted when all pending SceneProcedurals have been rendered or destroyed
 		static AllRenderedSignal &allRenderedSignal();

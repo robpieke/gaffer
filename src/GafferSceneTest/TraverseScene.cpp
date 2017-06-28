@@ -94,7 +94,7 @@ void GafferSceneTest::traverseScene( GafferScene::ScenePlug *scenePlug )
 	traverseScene( const_cast<const ScenePlug *>( scenePlug ) );
 }
 
-boost::signals::connection GafferSceneTest::connectTraverseSceneToPlugDirtiedSignal( const GafferScene::ConstScenePlugPtr &scene )
+boost::signals2::connection GafferSceneTest::connectTraverseSceneToPlugDirtiedSignal( const GafferScene::ConstScenePlugPtr &scene )
 {
 	const Node *node = scene->node();
 	if( !node )
@@ -105,12 +105,12 @@ boost::signals::connection GafferSceneTest::connectTraverseSceneToPlugDirtiedSig
 	return const_cast<Node *>( node )->plugDirtiedSignal().connect( boost::bind( &traverseOnDirty, ::_1, scene ) );
 }
 
-boost::signals::connection GafferSceneTest::connectTraverseSceneToContextChangedSignal( const GafferScene::ConstScenePlugPtr &scene, const Gaffer::ContextPtr &context )
+boost::signals2::connection GafferSceneTest::connectTraverseSceneToContextChangedSignal( const GafferScene::ConstScenePlugPtr &scene, const Gaffer::ContextPtr &context )
 {
 	return context->changedSignal().connect( boost::bind( &traverseOnChanged, scene, context ) );
 }
 
-boost::signals::connection GafferSceneTest::connectTraverseSceneToPreDispatchSignal( const GafferScene::ConstScenePlugPtr &scene )
+boost::signals2::connection GafferSceneTest::connectTraverseSceneToPreDispatchSignal( const GafferScene::ConstScenePlugPtr &scene )
 {
 	return GafferDispatch::Dispatcher::preDispatchSignal().connect( boost::bind( traverseOnPreDispatch, scene ) );
 }

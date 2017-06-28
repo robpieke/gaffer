@@ -85,7 +85,7 @@ using namespace GafferImageUI;
 /// Implementation of ImageView::ChannelChooser
 //////////////////////////////////////////////////////////////////////////
 
-class ImageView::ChannelChooser : public boost::signals::trackable
+class ImageView::ChannelChooser : public boost::signals2::trackable
 {
 
 	public :
@@ -185,7 +185,7 @@ class ImageView::ChannelChooser : public boost::signals::trackable
 /// Implementation of ImageView::ColorInspector
 //////////////////////////////////////////////////////////////////////////
 
-class ImageView::ColorInspector : public boost::signals::trackable
+class ImageView::ColorInspector : public boost::signals2::trackable
 {
 
 	public :

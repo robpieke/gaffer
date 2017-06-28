@@ -57,7 +57,7 @@ class BlockedConnection : boost::noncopyable
 
 	private :
 
-		boost::signals2::connection *m_connection;
+		boost::signals2::shared_connection_block m_block;
 
 };
 

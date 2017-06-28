@@ -53,7 +53,6 @@
 #include "GafferSceneUI/StandardLightVisualiser.h"
 
 using namespace std;
-using namespace boost;
 using namespace Imath;
 using namespace IECore;
 using namespace IECoreGL;
@@ -293,7 +292,7 @@ IECoreGL::ConstRenderablePtr StandardLightVisualiser::visualise( const IECore::I
 	ConstStringDataPtr type = Metadata::value<StringData>( metadataTarget, "type" );
 	ConstM44fDataPtr orientation = Metadata::value<M44fData>( metadataTarget, "visualiserOrientation" );
 
-	const Color3f color = parameter<Color3f>( metadataTarget, shaderParameters, "colorParameter", Color3f( 1.0f ) );
+	const Color3f color = ::parameter<Color3f>( metadataTarget, shaderParameters, "colorParameter", Color3f( 1.0f ) );
 	const float intensity = parameter<float>( metadataTarget, shaderParameters, "intensityParameter", 1 );
 	const float exposure = parameter<float>( metadataTarget, shaderParameters, "exposureParameter", 0 );
 
@@ -324,46 +323,46 @@ IECoreGL::ConstRenderablePtr StandardLightVisualiser::visualise( const IECore::I
 	if( type && type->readable() == "environment" )
 	{
 		const std::string textureName = parameter<std::string>( metadataTarget, shaderParameters, "textureNameParameter", "" );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( environmentSphere( finalColor, textureName ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( environmentSphere( finalColor, textureName ) ) );
 	}
 	else if( type && type->readable() == "spot" )
 	{
 		float innerAngle, outerAngle, lensRadius;
 		spotlightParameters( metadataTarget, shaderParameters, innerAngle, outerAngle, lensRadius );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( spotlightCone( innerAngle, outerAngle, lensRadius / locatorScale ) ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( ray() ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( spotlightCone( innerAngle, outerAngle, lensRadius / locatorScale ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( ray() ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
 	}
 	else if( type && type->readable() == "distant" )
 	{
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( distantRays() ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( distantRays() ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
 	}
 	else if( type && type->readable() == "quad" )
 	{
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( quadShape() ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( ray() ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( quadShape() ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( ray() ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
 	}
 	else if( type && type->readable() == "disk" )
 	{
 		const float radius = parameter<float>( metadataTarget, shaderParameters, "radiusParameter", 1 );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( diskShape( radius ) ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( ray() ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( diskShape( radius ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( ray() ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
 	}
 	else if( type && type->readable() == "cylinder" )
 	{
 		const float radius = parameter<float>( metadataTarget, shaderParameters, "radiusParameter", 1 );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( cylinderShape( radius ) ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( cylinderRays( radius ) ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( cylinderShape( radius ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( cylinderRays( radius ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ false ) ) );
 	}
 	else
 	{
 		// Treat everything else as a point light.
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( pointRays() ) );
-		result->addChild( const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ true ) ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( pointRays() ) );
+		result->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( colorIndicator( finalColor, /* cameraFacing = */ true ) ) );
 	}
 
 	return result;
@@ -515,7 +514,7 @@ IECoreGL::ConstRenderablePtr StandardLightVisualiser::distantRays()
 		Imath::M44f trans;
 		trans.rotate( V3f( 0, 0, 2.0 * M_PI / 3.0 * i ) );
 		trans.translate( V3f( 0, 0.4, 0.5 ) );
-		rayGroup->addChild( const_pointer_cast<IECoreGL::Renderable>( ray() ) );
+		rayGroup->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( ray() ) );
 		rayGroup->setTransform( trans );
 
 		result->addChild( rayGroup );
@@ -787,7 +786,7 @@ IECoreGL::ConstRenderablePtr StandardLightVisualiser::cylinderRays( float radius
 	for( int i = 0; i < numRays; ++i )
 	{
 		GroupPtr rayGroup = new Group;
-		rayGroup->addChild( const_pointer_cast<IECoreGL::Renderable>( StandardLightVisualiser::ray() ) );
+		rayGroup->addChild( boost::const_pointer_cast<IECoreGL::Renderable>( StandardLightVisualiser::ray() ) );
 
 		const float angle = M_PI * 2.0f * float(i)/(float)numRays;
 		M44f m;

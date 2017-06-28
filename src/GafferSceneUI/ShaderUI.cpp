@@ -86,7 +86,7 @@ class ShaderPlugAdder : public PlugAdder
 		void addPlug( Plug *connectionEndPoint )
 		{
 			vector<Plug *> plugs = showablePlugs( connectionEndPoint );
-			Plug *plug = plugMenuSignal()( "Connect To", plugs );
+			Plug *plug = plugMenuSignal()( "Connect To", plugs ).value();
 			if( !plug )
 			{
 				return;
@@ -103,7 +103,7 @@ class ShaderPlugAdder : public PlugAdder
 		bool buttonRelease( const ButtonEvent &event )
 		{
 			vector<Plug *> plugs = showablePlugs();
-			Plug *plug = plugMenuSignal()( "Show Parameter", plugs );
+			Plug *plug = plugMenuSignal()( "Show Parameter", plugs ).value();
 			if( !plug )
 			{
 				return false;

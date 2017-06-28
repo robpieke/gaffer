@@ -187,7 +187,7 @@ boost::python::object pythonConnection( const boost::signals2::connection &conne
 		// we construct via the python-bound copy constructor which
 		// avoids the problem.
 		PyTypeObject *type = boost::python::converter::registry::query(
-			boost::python::type_info( typeid( boost::signals::scoped_connection ) )
+			boost::python::type_info( typeid( boost::signals2::scoped_connection ) )
 		)->get_class_object();
 
 		boost::python::object oType( boost::python::handle<>( boost::python::borrowed( type ) ) );
@@ -204,10 +204,10 @@ boost::python::object pythonConnection( const boost::signals2::connection &conne
 void bindSignal()
 {
 
-	typedef boost::signal<object (), PythonResultCombiner > Signal0;
-	typedef boost::signal<object ( object ), PythonResultCombiner > Signal1;
-	typedef boost::signal<object ( object, object ), PythonResultCombiner > Signal2;
-	typedef boost::signal<object ( object, object, object ), PythonResultCombiner > Signal3;
+	typedef boost::signals2::signal<object (), PythonResultCombiner > Signal0;
+	typedef boost::signals2::signal<object ( object ), PythonResultCombiner > Signal1;
+	typedef boost::signals2::signal<object ( object, object ), PythonResultCombiner > Signal2;
+	typedef boost::signals2::signal<object ( object, object, object ), PythonResultCombiner > Signal3;
 
 	bind<Signal0>( "Signal0" );
 	bind<Signal1>( "Signal1" );

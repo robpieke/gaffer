@@ -66,7 +66,7 @@ class PlugAdder : public Gadget
 		/// When emitted, shows a menu containing the specified plugs, and returns
 		/// the chosen plug. Implemented as a signal so the menu can be implemented
 		/// externally in Python code.
-		typedef boost::signal<Gaffer::Plug *( const std::string &title, const std::vector<Gaffer::Plug *> & )> PlugMenuSignal;
+		typedef boost::signals2::signal<Gaffer::Plug *( const std::string &title, const std::vector<Gaffer::Plug *> & )> PlugMenuSignal;
 		static PlugMenuSignal &plugMenuSignal();
 
 	protected :

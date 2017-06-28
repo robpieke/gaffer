@@ -74,6 +74,8 @@ class CompoundPathFilter : public Gaffer::PathFilter
 
 		struct Filter
 		{
+			Filter() {};
+			Filter( const Filter &other ) : filter( other.filter ) {};
 			PathFilterPtr filter;
 			boost::signals2::scoped_connection filterChangedConnection;
 		};

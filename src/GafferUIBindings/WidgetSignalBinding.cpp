@@ -50,12 +50,12 @@ using namespace GafferUI;
 
 void GafferUIBindings::bindWidgetSignal()
 {
-	typedef boost::signal<bool ( object ), EventSignalCombiner<bool> > WidgetSignal;
+	typedef boost::signals2::signal<bool ( object ), EventSignalCombiner<bool> > WidgetSignal;
 	SignalClass<WidgetSignal>( "WidgetSignal" );
 
-	typedef boost::signal<bool ( object, object ), EventSignalCombiner<bool> > WidgetEventSignal;
+	typedef boost::signals2::signal<bool ( object, object ), EventSignalCombiner<bool> > WidgetEventSignal;
 	SignalClass<WidgetEventSignal>( "WidgetEventSignal" );
 
-	typedef boost::signal<IECore::RunTimeTypedPtr ( object, object ), EventSignalCombiner<IECore::RunTimeTypedPtr> > WidgetDragBeginSignal;
+	typedef boost::signals2::signal<IECore::RunTimeTypedPtr ( object, object ), EventSignalCombiner<IECore::RunTimeTypedPtr> > WidgetDragBeginSignal;
 	SignalClass<WidgetDragBeginSignal>( "WidgetDragBeginSignal" );
 }

@@ -38,6 +38,7 @@
 #include "boost/bind.hpp"
 #include "boost/bind/placeholders.hpp"
 #include "boost/algorithm/string/predicate.hpp"
+#include "boost/make_shared.hpp"
 
 #include "IECore/ParameterisedProcedural.h"
 #include "IECore/VectorTypedData.h"
@@ -81,7 +82,7 @@ using namespace GafferSceneUI;
 // SceneView::DrawingMode implementation
 //////////////////////////////////////////////////////////////////////////
 
-class SceneView::DrawingMode : public boost::signals::trackable
+class SceneView::DrawingMode : public boost::signals2::trackable
 {
 
 	public :
@@ -205,7 +206,7 @@ class SceneView::DrawingMode : public boost::signals::trackable
 // SceneView::ShadingMode implementation
 //////////////////////////////////////////////////////////////////////////
 
-class SceneView::ShadingMode : public boost::signals::trackable
+class SceneView::ShadingMode : public boost::signals2::trackable
 {
 
 	public :
@@ -318,7 +319,7 @@ class SceneView::ShadingMode : public boost::signals::trackable
 // SceneView::Grid implementation
 //////////////////////////////////////////////////////////////////////////
 
-class SceneView::Grid : public boost::signals::trackable
+class SceneView::Grid : public boost::signals2::trackable
 {
 
 	public :
@@ -527,7 +528,7 @@ class GnomonGadget : public GafferUI::Gadget
 
 } // namespace
 
-class SceneView::Gnomon : public boost::signals::trackable
+class SceneView::Gnomon : public boost::signals2::trackable
 {
 
 	public :
@@ -761,7 +762,7 @@ IE_CORE_DECLAREPTR( CameraOverlay )
 
 } // namespace
 
-class SceneView::LookThrough : public boost::signals::trackable
+class SceneView::LookThrough : public boost::signals2::trackable
 {
 
 	public :
@@ -1071,7 +1072,7 @@ class SceneView::LookThrough : public boost::signals::trackable
 		/// so they don't get destroyed
 		std::vector< Gaffer::ConstNodePtr > m_internalNodes;
 
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 
 		/// The default viewport camera - we store this so we can
 		/// return to it after looking through a scene camera.

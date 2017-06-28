@@ -39,6 +39,8 @@
 
 #include "tbb/enumerable_thread_specific.h"
 
+#include "boost/make_shared.hpp"
+
 #include "IECore/LRUCache.h"
 #include "IECore/SearchPath.h"
 

@@ -38,7 +38,7 @@
 #ifndef GAFFERUI_STYLE_H
 #define GAFFERUI_STYLE_H
 
-#include "boost/signal.hpp"
+#include "boost/signals2.hpp"
 
 #include "OpenEXR/ImathBox.h"
 
@@ -145,7 +145,7 @@ class Style : public IECore::RunTimeTyped
 		virtual void renderScaleHandle( Axes axes, State state = NormalState ) const = 0;
 		//@}
 
-		typedef boost::signal<void (Style *)> UnarySignal;
+		typedef boost::signals2::signal<void (Style *)> UnarySignal;
 		/// Emitted when the style has changed in a way which
 		/// would necessitate a redraw.
 		UnarySignal &changedSignal();

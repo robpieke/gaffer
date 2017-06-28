@@ -61,7 +61,7 @@ class Reference : public SubGraph
 		/// Returns the name of the script currently being referenced.
 		const std::string &fileName() const;
 
-		typedef boost::signal<void ( Reference * )> ReferenceLoadedSignal;
+		typedef boost::signals2::signal<void ( Reference * )> ReferenceLoadedSignal;
 		/// Emitted when a reference is loaded (or unloaded following an undo).
 		ReferenceLoadedSignal &referenceLoadedSignal();
 

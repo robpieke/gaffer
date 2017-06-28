@@ -70,7 +70,7 @@ class NodeGadget : public Gadget
 		/// purposes of drawing connections.
 		virtual Imath::V3f noduleTangent( const Nodule *nodule ) const;
 
-		typedef boost::signal<void ( NodeGadget *, Nodule * )> NoduleSignal;
+		typedef boost::signals2::signal<void ( NodeGadget *, Nodule * )> NoduleSignal;
 		/// Emitted when a nodule is added. It is the responsibility
 		/// of derived classes and compound nodules to emit this when
 		/// appropriate.

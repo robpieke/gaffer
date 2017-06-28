@@ -87,8 +87,7 @@ void PathFilter::filter( std::vector<PathPtr> &paths ) const
 	doFilter( paths );
 }
 
-typedef boost::signal<void ( PathFilter * )> ChangedSignal;
-ChangedSignal &PathFilter::changedSignal()
+PathFilter::ChangedSignal &PathFilter::changedSignal()
 {
 	return m_changedSignal;
 }

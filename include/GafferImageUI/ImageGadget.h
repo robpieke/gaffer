@@ -99,7 +99,7 @@ class ImageGadget : public GafferUI::Gadget
 		void setChannels( const Channels &channels );
 		const Channels &getChannels() const;
 
-		typedef boost::signal<void (ImageGadget *)> ChannelsChangedSignal;
+		typedef boost::signals2::signal<void (ImageGadget *)> ChannelsChangedSignal;
 		ChannelsChangedSignal &channelsChangedSignal();
 
 		/// Chooses a channel to show in isolation.

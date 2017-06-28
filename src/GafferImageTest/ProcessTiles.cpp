@@ -78,7 +78,7 @@ void processTiles( const GafferImage::ImagePlug *imagePlug )
 	ImageAlgo::parallelProcessTiles( imagePlug, imagePlug->channelNamesPlug()->getValue()->readable(), f );
 }
 
-boost::signals::connection connectProcessTilesToPlugDirtiedSignal( GafferImage::ConstImagePlugPtr image )
+boost::signals2::connection connectProcessTilesToPlugDirtiedSignal( GafferImage::ConstImagePlugPtr image )
 {
 	const Node *node = image->node();
 	if( !node )

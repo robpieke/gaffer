@@ -61,7 +61,7 @@ struct PlugMenuSignalCaller
 
 	PlugPtr call( PlugAdder::PlugMenuSignal &s, const std::string &title, const vector<Plug *> &plugs )
 	{
-		return s( title, plugs );
+		return s( title, plugs ).value();
 	}
 
 };

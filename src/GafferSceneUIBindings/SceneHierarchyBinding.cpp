@@ -196,8 +196,8 @@ class SceneHierarchyFilter : public Gaffer::PathFilter
 		ConstScenePlugPtr m_scene;
 		ConstContextPtr m_context;
 
-		boost::signals::scoped_connection m_plugDirtiedConnection;
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_plugDirtiedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 
 };
 
