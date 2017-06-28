@@ -38,7 +38,7 @@
 #ifndef GAFFER_PATH_H
 #define GAFFER_PATH_H
 
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECore/RunTimeTyped.h"
 #include "IECore/InternedString.h"

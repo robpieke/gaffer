@@ -37,7 +37,7 @@
 #ifndef GAFFER_BEHAVIOURS_BEHAVIOUR_H
 #define GAFFER_BEHAVIOURS_BEHAVIOUR_H
 
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 namespace Gaffer
 {
@@ -52,7 +52,7 @@ namespace Behaviours
 /// we get greater flexibility than if we attempted
 /// to do the same by deriving new classes from the
 /// GraphComponents.
-class Behaviour : public boost::signals::trackable
+class Behaviour : public boost::signals2::trackable
 {
 
 	public :

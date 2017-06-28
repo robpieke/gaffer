@@ -39,7 +39,7 @@
 #define GAFFERBINDINGS_SIGNALBINDING_INL
 
 #include "boost/version.hpp"
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECorePython/ScopedGILRelease.h"
 #include "IECorePython/ScopedGILLock.h"
@@ -354,7 +354,7 @@ struct Slot : public SlotBase<Signal::slot_function_type::arity, Signal, Caller>
 	}
 };
 
-boost::python::object pythonConnection( const boost::signals::connection &connection, bool scoped );
+boost::python::object pythonConnection( const boost::signals2::connection &connection, bool scoped );
 
 template<typename Signal, typename SlotCaller>
 boost::python::object connect( Signal &s, boost::python::object &slot, bool scoped )

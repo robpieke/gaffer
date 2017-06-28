@@ -102,8 +102,8 @@ class ScriptNode : public Node
 		/// be active while those operations are being performed.
 		////////////////////////////////////////////////////////////////////
 		//@{
-		typedef boost::signal<void ( ScriptNode *, const Action *, Action::Stage stage )> ActionSignal;
-		typedef boost::signal<void ( ScriptNode * )> UndoAddedSignal;
+		typedef boost::signals2::signal<void ( ScriptNode *, const Action *, Action::Stage stage )> ActionSignal;
+		typedef boost::signals2::signal<void ( ScriptNode * )> UndoAddedSignal;
 		bool undoAvailable() const;
 		void undo();
 		bool redoAvailable() const;
@@ -182,7 +182,7 @@ class ScriptNode : public Node
 		/// distinguishing between them.
 		bool isExecuting() const;
 		/// This signal is emitted following successful execution of a script.
-		typedef boost::signal<void ( ScriptNodePtr, const std::string )> ScriptExecutedSignal;
+		typedef boost::signals2::signal<void ( ScriptNodePtr, const std::string )> ScriptExecutedSignal;
 		ScriptExecutedSignal &scriptExecutedSignal();
 		//@}
 

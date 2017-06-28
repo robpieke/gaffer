@@ -232,22 +232,22 @@ class GraphGadget : public ContainerGadget
 		Gaffer::NodePtr m_root;
 		Gaffer::ScriptNodePtr m_scriptNode;
 		RootChangedSignal m_rootChangedSignal;
-		boost::signals::scoped_connection m_rootChildAddedConnection;
-		boost::signals::scoped_connection m_rootChildRemovedConnection;
-		boost::signals::scoped_connection m_selectionMemberAddedConnection;
-		boost::signals::scoped_connection m_selectionMemberRemovedConnection;
+		boost::signals2::scoped_connection m_rootChildAddedConnection;
+		boost::signals2::scoped_connection m_rootChildRemovedConnection;
+		boost::signals2::scoped_connection m_selectionMemberAddedConnection;
+		boost::signals2::scoped_connection m_selectionMemberRemovedConnection;
 
 		Gaffer::SetPtr m_filter;
-		boost::signals::scoped_connection m_filterMemberAddedConnection;
-		boost::signals::scoped_connection m_filterMemberRemovedConnection;
+		boost::signals2::scoped_connection m_filterMemberAddedConnection;
+		boost::signals2::scoped_connection m_filterMemberRemovedConnection;
 
 		struct NodeGadgetEntry
 		{
 			NodeGadget *gadget;
-			boost::signals::scoped_connection inputChangedConnection;
-			boost::signals::scoped_connection plugSetConnection;
-			boost::signals::scoped_connection noduleAddedConnection;
-			boost::signals::scoped_connection noduleRemovedConnection;
+			boost::signals2::scoped_connection inputChangedConnection;
+			boost::signals2::scoped_connection plugSetConnection;
+			boost::signals2::scoped_connection noduleAddedConnection;
+			boost::signals2::scoped_connection noduleRemovedConnection;
 		};
 		typedef std::map<const Gaffer::Node *, NodeGadgetEntry> NodeGadgetMap;
 		NodeGadgetMap m_nodeGadgets;

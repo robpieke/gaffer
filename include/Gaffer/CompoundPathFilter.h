@@ -75,7 +75,7 @@ class CompoundPathFilter : public Gaffer::PathFilter
 		struct Filter
 		{
 			PathFilterPtr filter;
-			boost::signals::scoped_connection filterChangedConnection;
+			boost::signals2::scoped_connection filterChangedConnection;
 		};
 
 		// Using a list rather than a vector, because

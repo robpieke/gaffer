@@ -69,7 +69,7 @@ class SceneFilterPathFilter : public Gaffer::PathFilter
 		struct Remove;
 
 		FilterPtr m_sceneFilter;
-		boost::signals::scoped_connection m_plugDirtiedConnection;
+		boost::signals2::scoped_connection m_plugDirtiedConnection;
 
 };
 

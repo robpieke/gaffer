@@ -199,7 +199,7 @@ class Gadget : public Gaffer::GraphComponent
 		//@}
 
 		/// @name Events
-		/// Events are specified as boost::signals. This allows anything to
+		/// Events are specified as boost::signals2. This allows anything to
 		/// react to an event rather than just the Gadget receiving it,
 		/// which makes for much more flexible customisation of the UI.
 		////////////////////////////////////////////////////////////////////

@@ -48,7 +48,7 @@ namespace Gaffer
 /// Set provides an abstract base class for an arbitrary collection
 /// of IECore::RunTimeTyped objects.
 /// \todo Provide an iterator wrapping member().
-class Set : public IECore::RunTimeTyped, public boost::signals::trackable
+class Set : public IECore::RunTimeTyped, public boost::signals2::trackable
 {
 
 	public :
@@ -71,7 +71,7 @@ class Set : public IECore::RunTimeTyped, public boost::signals::trackable
 		/// Returns true if the object is a member of the set.
 		virtual bool contains( const Member *object ) const = 0;
 
-		typedef boost::signal<void ( Set *, Member * )> MemberSignal;
+		typedef boost::signals2::signal<void ( Set *, Member * )> MemberSignal;
 
 		/// A signal emitted when a new member is added to the Set. It is
 		/// the responsibility of derived classes to emit this when appropriate.

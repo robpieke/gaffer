@@ -123,8 +123,8 @@ class SceneGadget : public GafferUI::Gadget
 		void updateSceneGraph() const;
 		void renderSceneGraph( const IECoreGL::State *stateToBind ) const;
 
-		boost::signals::scoped_connection m_plugDirtiedConnection;
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_plugDirtiedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 
 		GafferScene::ConstScenePlugPtr m_scene;
 		Gaffer::ContextPtr m_context;

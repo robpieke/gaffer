@@ -133,7 +133,7 @@ class FormatPlug : public Gaffer::ValuePlug
 		void plugDirtied( Gaffer::Plug *plug );
 
 		Format m_defaultValue;
-		boost::signals::scoped_connection m_plugDirtiedConnection;
+		boost::signals2::scoped_connection m_plugDirtiedConnection;
 
 };
 

@@ -80,12 +80,12 @@ class CropWindowTool : public GafferUI::Tool
 		bool findCropWindowPlug( GafferScene::ScenePlug *scene, bool enabledOnly  );
 		bool findCropWindowPlugFromNode( GafferScene::ScenePlug *scene, bool enabledOnly  );
 
-		boost::signals::scoped_connection m_overlayRectangleChangedConnection;
+		boost::signals2::scoped_connection m_overlayRectangleChangedConnection;
 
 		bool m_needCropWindowPlugSearch;
 		Gaffer::Box2fPlugPtr m_cropWindowPlug;
 		Gaffer::BoolPlugPtr m_cropWindowEnabledPlug; // may be NULL, even when m_cropWindowPlug is not
-		boost::signals::scoped_connection m_cropWindowPlugDirtiedConnection;
+		boost::signals2::scoped_connection m_cropWindowPlugDirtiedConnection;
 
 		bool m_overlayDirty;
 		RectanglePtr m_overlay;

@@ -77,7 +77,7 @@ class ApplicationRoot : public GraphComponent
 		/// Sets the clipboard contents - a copy of clip is taken.
 		void setClipboardContents( const IECore::Object *clip );
 		/// A signal emitted when the clipboard contents have changed.
-		typedef boost::signal<void (ApplicationRoot *)> ClipboardSignal;
+		typedef boost::signals2::signal<void (ApplicationRoot *)> ClipboardSignal;
 		ClipboardSignal &clipboardContentsChangedSignal();
 		//@}
 

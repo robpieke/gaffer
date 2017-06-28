@@ -98,7 +98,7 @@ class ShaderView : public GafferImageUI::ImageView
 		bool m_framed;
 		Gaffer::NodePtr m_imageConverter;
 
-		boost::signals::scoped_connection m_idleConnection;
+		boost::signals2::scoped_connection m_idleConnection;
 
 		Gaffer::NodePtr m_renderer;
 		std::string m_rendererShaderPrefix;

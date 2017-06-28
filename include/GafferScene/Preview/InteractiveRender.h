@@ -129,7 +129,7 @@ class InteractiveRender : public Gaffer::Node
 
 		Gaffer::ContextPtr m_context; // Accessed with setContext()/getContext()
 		Gaffer::ContextPtr m_effectiveContext; // Base context actually used for rendering
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 
 		static size_t g_firstPlugIndex;
 

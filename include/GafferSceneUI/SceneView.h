@@ -120,7 +120,7 @@ class SceneView : public GafferUI::View
 		void transferSelectionToContext();
 		void plugSet( Gaffer::Plug *plug );
 
-		boost::signals::scoped_connection m_selectionChangedConnection;
+		boost::signals2::scoped_connection m_selectionChangedConnection;
 
 		SceneGadgetPtr m_sceneGadget;
 

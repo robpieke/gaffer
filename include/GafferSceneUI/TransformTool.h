@@ -159,7 +159,7 @@ class TransformTool : public GafferSceneUI::SelectionTool
 		void updateSelection() const;
 		void preRender();
 
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 
 		GafferUI::GadgetPtr m_handles;
 		mutable Selection m_selection;

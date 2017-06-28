@@ -38,7 +38,7 @@
 #ifndef GAFFER_PATHFILTER_H
 #define GAFFER_PATHFILTER_H
 
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECore/RunTimeTyped.h"
 #include "IECore/CompoundData.h"

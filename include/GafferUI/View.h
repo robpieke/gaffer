@@ -143,7 +143,7 @@ class View : public Gaffer::Node
 		/// Returns the connection used to trigger the call to contextChanged(). Derived
 		/// classes may block this temporarily if they want to prevent the triggering -
 		/// this can be useful when modifying the context.
-		boost::signals::connection &contextChangedConnection();
+		boost::signals2::connection &contextChangedConnection();
 
 		/// May be overridden by derived classes to control the region that is framed
 		/// when "F" is pressed.
@@ -162,7 +162,7 @@ class View : public Gaffer::Node
 		ViewportGadgetPtr m_viewportGadget;
 		Gaffer::ContextPtr m_context;
 		UnarySignal m_contextChangedSignal;
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 
 		bool keyPress( GadgetPtr gadget, const KeyEvent &keyEvent );
 

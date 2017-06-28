@@ -228,7 +228,7 @@ class ViewportGadget : public Gadget
 		GadgetPtr m_gadgetUnderMouse;
 
 		bool m_dragTracking;
-		boost::signals::connection m_dragTrackingIdleConnection;
+		boost::signals2::connection m_dragTrackingIdleConnection;
 		DragDropEvent m_dragTrackingEvent;
 		float m_dragTrackingThreshold;
 		Imath::V2f m_dragTrackingVelocity;

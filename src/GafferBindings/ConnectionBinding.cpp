@@ -36,7 +36,7 @@
 //////////////////////////////////////////////////////////////////////////
 
 #include "boost/python.hpp"
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "GafferBindings/ConnectionBinding.h"
 

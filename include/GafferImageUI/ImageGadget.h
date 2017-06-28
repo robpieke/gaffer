@@ -127,8 +127,8 @@ class ImageGadget : public GafferUI::Gadget
 		GafferImage::ConstImagePlugPtr m_image;
 		Gaffer::ContextPtr m_context;
 
-		boost::signals::scoped_connection m_plugDirtiedConnection;
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_plugDirtiedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 
 		// Settings to control how the image is displayed.
 

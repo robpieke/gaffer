@@ -84,9 +84,9 @@ class PlugGadget : public ContainerGadget
 		void contextChanged( const Gaffer::Context *context, const IECore::InternedString &name );
 		void updateContextConnection();
 
-		boost::signals::scoped_connection m_plugDirtiedConnection;
-		boost::signals::scoped_connection m_plugInputChangedConnection;
-		boost::signals::scoped_connection m_contextChangedConnection;
+		boost::signals2::scoped_connection m_plugDirtiedConnection;
+		boost::signals2::scoped_connection m_plugInputChangedConnection;
+		boost::signals2::scoped_connection m_contextChangedConnection;
 		Gaffer::PlugPtr m_plug;
 		Gaffer::ContextPtr m_context;
 

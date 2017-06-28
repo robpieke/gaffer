@@ -54,15 +54,15 @@ void traverseScene( GafferScene::ScenePlug *scenePlug );
 /// Arranges for traverseScene() to be called every time the scene is dirtied. This is useful
 /// for exposing bugs caused by things like InteractiveRender and SceneView, where threaded
 /// traversals will be triggered automatically by plugDirtiedSignal().
-boost::signals::connection connectTraverseSceneToPlugDirtiedSignal( const GafferScene::ConstScenePlugPtr &scene );
+boost::signals2::connection connectTraverseSceneToPlugDirtiedSignal( const GafferScene::ConstScenePlugPtr &scene );
 
 /// Arranges for traverseScene() to be called every time the context is changed. This is useful
 /// for exposing bugs caused by things like InteractiveRender and SceneView, where threaded
 /// traversals will be triggered automatically from Context::changedSignal().
-boost::signals::connection connectTraverseSceneToContextChangedSignal( const GafferScene::ConstScenePlugPtr &scene, const Gaffer::ContextPtr &context );
+boost::signals2::connection connectTraverseSceneToContextChangedSignal( const GafferScene::ConstScenePlugPtr &scene, const Gaffer::ContextPtr &context );
 
 /// Arranges for traverseScene() to be called when Dispatcher::preDispatchSignal() is emitted.
-boost::signals::connection connectTraverseSceneToPreDispatchSignal( const GafferScene::ConstScenePlugPtr &scene );
+boost::signals2::connection connectTraverseSceneToPreDispatchSignal( const GafferScene::ConstScenePlugPtr &scene );
 
 } // namespace GafferSceneTest
 

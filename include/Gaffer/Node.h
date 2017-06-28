@@ -64,8 +64,8 @@ class Node : public GraphComponent
 
 		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( Gaffer::Node, NodeTypeId, GraphComponent );
 
-		typedef boost::signal<void (Plug *)> UnaryPlugSignal;
-		typedef boost::signal<void (Plug *, Plug *)> BinaryPlugSignal;
+		typedef boost::signals2::signal<void (Plug *)> UnaryPlugSignal;
+		typedef boost::signals2::signal<void (Plug *, Plug *)> BinaryPlugSignal;
 
 		/// @name Plug signals
 		/// These signals are emitted on events relating to child Plugs
@@ -135,7 +135,7 @@ class Node : public GraphComponent
 		/// specifies the original source of the error, since it may be being
 		/// propagated downstream from an original upstream error. The error
 		/// argument is a description of the problem.
-		typedef boost::signal<void ( const Plug *plug, const Plug *source, const std::string &error )> ErrorSignal;
+		typedef boost::signals2::signal<void ( const Plug *plug, const Plug *source, const std::string &error )> ErrorSignal;
 		/// Signal emitted when an error occurs while processing this node.
 		/// This is intended to allow UI elements to display errors that occur
 		/// during processing triggered by other parts of the UI.

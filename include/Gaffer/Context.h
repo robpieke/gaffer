@@ -38,7 +38,7 @@
 #define GAFFER_CONTEXT_H
 
 #include "boost/container/flat_map.hpp"
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECore/InternedString.h"
 #include "IECore/Data.h"
@@ -111,7 +111,7 @@ class Context : public IECore::RefCounted
 
 		IE_CORE_DECLAREMEMBERPTR( Context )
 
-		typedef boost::signal<void ( const Context *context, const IECore::InternedString & )> ChangedSignal;
+		typedef boost::signals2::signal<void ( const Context *context, const IECore::InternedString & )> ChangedSignal;
 
 		template<typename T, typename Enabler=void>
 		struct Accessor;

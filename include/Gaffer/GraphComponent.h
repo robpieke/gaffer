@@ -38,7 +38,7 @@
 #ifndef GAFFER_GRAPHCOMPONENT_H
 #define GAFFER_GRAPHCOMPONENT_H
 
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECore/RunTimeTyped.h"
 #include "IECore/InternedString.h"
@@ -59,7 +59,7 @@ class FilteredChildIterator;
 template<typename Predicate, typename RecursionPredicate>
 class FilteredRecursiveChildIterator;
 
-class GraphComponent : public IECore::RunTimeTyped, public boost::signals::trackable
+class GraphComponent : public IECore::RunTimeTyped, public boost::signals2::trackable
 {
 
 	public :
@@ -69,8 +69,8 @@ class GraphComponent : public IECore::RunTimeTyped, public boost::signals::track
 
 		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( Gaffer::GraphComponent, GraphComponentTypeId, IECore::RunTimeTyped );
 
-		typedef boost::signal<void (GraphComponent *)> UnarySignal;
-		typedef boost::signal<void (GraphComponent *, GraphComponent *)> BinarySignal;
+		typedef boost::signals2::signal<void (GraphComponent *)> UnarySignal;
+		typedef boost::signals2::signal<void (GraphComponent *, GraphComponent *)> BinarySignal;
 
 		/// @name Naming
 		/// All GraphComponents have a name, which must be unique among

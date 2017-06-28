@@ -37,7 +37,7 @@
 #ifndef GAFFERUI_POINTER_H
 #define GAFFERUI_POINTER_H
 
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECore/ImagePrimitive.h"
 

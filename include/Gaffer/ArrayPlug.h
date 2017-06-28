@@ -87,7 +87,7 @@ class ArrayPlug : public Plug
 		size_t m_minSize;
 		size_t m_maxSize;
 
-		boost::signals::scoped_connection m_inputChangedConnection;
+		boost::signals2::scoped_connection m_inputChangedConnection;
 
 };
 

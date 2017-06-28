@@ -42,7 +42,7 @@
 #include <map>
 #include <set>
 
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECore/CompoundData.h"
 #include "IECore/FrameList.h"

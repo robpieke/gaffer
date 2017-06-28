@@ -38,7 +38,7 @@
 #define GAFFER_METADATA_H
 
 #include "boost/function.hpp"
-#include "boost/signals.hpp"
+#include "boost/signals2.hpp"
 
 #include "IECore/InternedString.h"
 #include "IECore/Data.h"
