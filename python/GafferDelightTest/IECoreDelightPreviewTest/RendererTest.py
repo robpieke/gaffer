@@ -89,6 +89,73 @@ class RendererTest( GafferTest.TestCase ) :
 
 		self.assertTrue( os.path.exists( self.temporaryDirectory() + "/beauty.exr" ) )
 
+	def testAOVs( self ) :
+
+		for data, expected in {
+			"rgba" : [
+				'"variablename" "string" 1 "Ci"',
+				'"variablesource" "string" 1 "shader"',
+				'"layertype" "string" 1 "color"',
+				'"withalpha" "int" 1 1',
+			],
+			"z" : [
+				'"variablename" "string" 1 "z"',
+				'"variablesource" "string" 1 "builtin"',
+				'"layertype" "string" 1 "scalar"',
+				'"withalpha" "int" 1 0',
+			],
+			"color diffuse" : [
+				'"variablename" "string" 1 "diffuse"',
+				'"variablesource" "string" 1 "shader"',
+				'"layertype" "string" 1 "color"',
+				'"withalpha" "int" 1 0',
+			],
+			"color attribute:test" : [
+				'"variablename" "string" 1 "test"',
+				'"variablesource" "string" 1 "attribute"',
+				'"layertype" "string" 1 "color"',
+				'"withalpha" "int" 1 0',
+			],
+			"point builtin:P" : [
+				'"variablename" "string" 1 "P"',
+				'"variablesource" "string" 1 "builtin"',
+				'"layertype" "string" 1 "vector"',
+				'"withalpha" "int" 1 0',
+			],
+			"float builtin:alpha" : [
+				'"variablename" "string" 1 "alpha"',
+				'"variablesource" "string" 1 "builtin"',
+				'"layertype" "string" 1 "scalar"',
+				'"withalpha" "int" 1 0',
+			],
+		}.items() :
+
+			r = GafferScene.Private.IECoreScenePreview.Renderer.create(
+				"3Delight",
+				GafferScene.Private.IECoreScenePreview.Renderer.RenderType.SceneDescription,
+				self.temporaryDirectory() + "/test.nsi"
+			)
+
+			r.output(
+				"test",
+				IECore.Display(
+					"beauty.exr",
+					"exr",
+					data,
+					{
+						"filter" : "gaussian",
+						"filterwidth" : IECore.V2f( 3.5 ),
+					}
+				)
+			)
+
+			r.render()
+			del r
+
+			nsi = self.__parse( self.temporaryDirectory() + "/test.nsi" )
+			for e in expected :
+				self.__assertInNSI( e, nsi )
+
 	def testMesh( self ) :
 
 		r = GafferScene.Private.IECoreScenePreview.Renderer.create(
