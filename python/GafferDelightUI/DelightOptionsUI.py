@@ -57,6 +57,9 @@ def __qualitySummary( plug ) :
 
 	info = []
 
+	if plug["oversampling"]["enabled"].getValue() :
+		info.append( "Oversampling {}".format( plug["oversampling"]["value"].getValue() ) )
+
 	if plug["shadingSamples"]["enabled"].getValue() :
 		info.append( "Shading Samples {}".format( plug["shadingSamples"]["value"].getValue() ) )
 
@@ -175,6 +178,20 @@ Gaffer.Metadata.registerNode(
 		],
 
 		# Quality
+
+		"options.oversampling" : [
+
+			"description",
+			"""
+			The number of camera rays to fire for each pixel of
+			the image. Higher values may be needed to resolve fine
+			geometric detail such as hair, or to reduce noise in
+			heavily motion blurred renders.
+			""",
+
+			"layout:section", "Quality",
+
+		],
 
 		"options.shadingSamples" : [
 
