@@ -53,6 +53,7 @@
 #include "Gaffer/StringAlgo.h"
 
 #include "GafferScene/Private/IECoreScenePreview/Renderer.h"
+#include "GafferScene/Private/IECoreScenePreview/Procedural.h"
 
 #include "GafferDelight/IECoreDelightPreview/ParameterList.h"
 #include "GafferDelight/IECoreDelightPreview/NodeAlgo.h"
@@ -847,7 +848,7 @@ class DelightObject : public IECoreScenePreview::Renderer::ObjectInterface
 
 	public :
 
-		DelightObject( NSIContext_t context, const std::string &name, DelightHandleSharedPtr instance, DelightHandle::Ownership ownership )
+		DelightObject( NSIContext_t context, const std::string &name, DelightHandleSharedPtr instance, DelightHandle::Ownership ownership, NSIHandle_t root )
 			:	m_transformHandle( context, name, ownership, "transform", {} ), m_instance( instance ), m_haveTransform( false )
 		{
 			NSIConnect(
@@ -860,7 +861,7 @@ class DelightObject : public IECoreScenePreview::Renderer::ObjectInterface
 			NSIConnect(
 				m_transformHandle.context(),
 				m_transformHandle.name(), "",
-				NSI_SCENE_ROOT, "objects",
+				root, "objects",
 				0, nullptr
 			);
 		}
@@ -950,6 +951,155 @@ class DelightObject : public IECoreScenePreview::Renderer::ObjectInterface
 } // namespace
 
 //////////////////////////////////////////////////////////////////////////
+// DelightRendererBase
+//////////////////////////////////////////////////////////////////////////
+
+class DelightRendererBase : public IECoreScenePreview::Renderer
+{
+
+	public :
+
+		Renderer::AttributesInterfacePtr attributes( const IECore::CompoundObject *attributes ) override
+		{
+			return m_attributesCache->get( attributes );
+		}
+
+		ObjectInterfacePtr light( const std::string &name, const IECore::Object *object, const AttributesInterface *attributes ) override
+		{
+			return this->object( name, object, attributes );
+		}
+
+		Renderer::ObjectInterfacePtr object( const std::string &name, const IECore::Object *object, const AttributesInterface *attributes ) override
+		{
+			DelightHandleSharedPtr instance = m_instanceCache->get( object );
+			if( !instance )
+			{
+				return nullptr;
+			}
+
+			ObjectInterfacePtr result = new DelightObject( m_context, name, instance, m_ownership, m_root );
+			result->attributes( attributes );
+			return result;
+		}
+
+		ObjectInterfacePtr object( const std::string &name, const std::vector<const IECore::Object *> &samples, const std::vector<float> &times, const AttributesInterface *attributes ) override
+		{
+			DelightHandleSharedPtr instance = m_instanceCache->get( samples, times );
+			if( !instance )
+			{
+				return nullptr;
+			}
+
+			ObjectInterfacePtr result = new DelightObject( m_context, name, instance, m_ownership, m_root );
+			result->attributes( attributes );
+			return result;
+		}
+
+	protected :
+
+		DelightRendererBase( NSIContext_t context, DelightHandle::Ownership ownership, NSIHandle_t root = NSI_SCENE_ROOT )
+			:	m_context( context ),
+				m_ownership( ownership ),
+				m_root( root ),
+				m_instanceCache( new InstanceCache( context, ownership ) ),
+				m_attributesCache( new AttributesCache( m_context, ownership ) )
+		{
+		};
+
+		const NSIContext_t m_context;
+		const DelightHandle::Ownership m_ownership;
+		const NSIHandle_t m_root;
+
+		InstanceCachePtr m_instanceCache;
+		AttributesCachePtr m_attributesCache;
+
+};
+
+//////////////////////////////////////////////////////////////////////////
+// ProceduralRenderer
+//////////////////////////////////////////////////////////////////////////
+
+class ProceduralRenderer final : public DelightRendererBase
+{
+
+	public :
+
+		void option( const IECore::InternedString &name, const IECore::Data *value ) override
+		{
+			IECore::msg( IECore::Msg::Warning, "DelightRenderer", "Procedurals can not call option()" );
+		}
+
+		void output( const IECore::InternedString &name, const Output *output ) override
+		{
+			IECore::msg( IECore::Msg::Warning, "DelightRenderer", "Procedurals can not call output()" );
+		}
+
+		ObjectInterfacePtr camera( const std::string &name, const IECore::Camera *camera, const AttributesInterface *attributes ) override
+		{
+			IECore::msg( IECore::Msg::Warning, "DelightRenderer", "Procedurals can not call camera()" );
+			return nullptr;
+		}
+
+		void render() override
+		{
+			IECore::msg( IECore::Msg::Warning, "DelightRenderer", "Procedurals can not call render()" );
+		}
+
+		void pause() override
+		{
+			IECore::msg( IECore::Msg::Warning, "DelightRenderer", "Procedurals can not call pause()" );
+		}
+
+		// Renderer::AttributesInterfacePtr attributes( const IECore::CompoundObject *attributes ) override
+		// {
+		// 	return m_attributesCache->get( attributes );
+		// }
+
+		// ObjectInterfacePtr light( const std::string &name, const IECore::Object *object, const AttributesInterface *attributes ) override
+		// {
+		// 	return this->object( name, object, attributes );
+		// }
+
+		// Renderer::ObjectInterfacePtr object( const std::string &name, const IECore::Object *object, const AttributesInterface *attributes ) override
+		// {
+		// 	DelightHandleSharedPtr instance = m_instanceCache->get( object );
+		// 	if( !instance )
+		// 	{
+		// 		return nullptr;
+		// 	}
+
+		// 	ObjectInterfacePtr result = new DelightObject( m_context, name, instance, m_ownership, m_root );
+		// 	result->attributes( attributes );
+		// 	return result;
+		// }
+
+		// ObjectInterfacePtr object( const std::string &name, const std::vector<const IECore::Object *> &samples, const std::vector<float> &times, const AttributesInterface *attributes ) override
+		// {
+		// 	DelightHandleSharedPtr instance = m_instanceCache->get( samples, times );
+		// 	if( !instance )
+		// 	{
+		// 		return nullptr;
+		// 	}
+
+		// 	ObjectInterfacePtr result = new DelightObject( m_context, name, instance, m_ownership, m_root );
+		// 	result->attributes( attributes );
+		// 	return result;
+		// }
+
+	protected :
+
+		// DelightRendererBase( NSIContext_t context, DelightHandle::Ownership ownership, NSIHandle_t root = NSI_SCENE_ROOT )
+		// 	:	m_context( context ),
+		// 		m_ownership( ownership ),
+		// 		m_root( root ),
+		// 		m_instanceCache( new InstanceCache( context, ownership ) ),
+		// 		m_attributesCache( new AttributesCache( m_context, ownership ) )
+		// {
+		// };
+
+};
+
+//////////////////////////////////////////////////////////////////////////
 // DelightRenderer
 //////////////////////////////////////////////////////////////////////////
 
@@ -963,29 +1113,16 @@ IECore::InternedString g_oversamplingOptionName( "dl:oversampling" );
 
 IE_CORE_FORWARDDECLARE( DelightRenderer )
 
-class DelightRenderer final : public IECoreScenePreview::Renderer
+class DelightRenderer final : public DelightRendererBase
 {
 
 	public :
 
 		DelightRenderer( RenderType renderType, const std::string &fileName )
-			:	m_renderType( renderType ), m_frame( 1 ), m_oversampling( 9 )
+			:	DelightRendererBase( createContext( renderType, fileName ), renderType == Interactive ? DelightHandle::Owned : DelightHandle::Unowned ),
+				m_frame( 1 ),
+				m_oversampling( 9 )
 		{
-			vector<NSIParam_t> params;
-
-			const char *apistream = "apistream";
-			const char *fileNamePtr = fileName.c_str();
-			if( renderType == SceneDescription )
-			{
-				params = {
-					{ "type", &apistream, NSITypeString, 0, 1 },
-					{ "streamfilename", &fileNamePtr, NSITypeString , 0, 1 }//,
-				};
-			}
-
-			m_context = NSIBegin( params.size(), params.data() );
-			m_instanceCache = new InstanceCache( m_context, ownership() );
-			m_attributesCache = new AttributesCache( m_context, ownership() );
 		}
 
 		~DelightRenderer() override
@@ -1094,12 +1231,7 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 				return;
 			}
 
-			m_outputs[name] = new DelightOutput( m_context, name, output, ownership() );
-		}
-
-		Renderer::AttributesInterfacePtr attributes( const IECore::CompoundObject *attributes ) override
-		{
-			return m_attributesCache->get( attributes );
+			m_outputs[name] = new DelightOutput( m_context, name, output, m_ownership );
 		}
 
 		ObjectInterfacePtr camera( const std::string &name, const IECore::Camera *camera, const AttributesInterface *attributes ) override
@@ -1119,7 +1251,7 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 			}
 
 			DelightHandleSharedPtr cameraHandle(
-				new DelightHandle( m_context, objectHandle.c_str(), ownership() ),
+				new DelightHandle( m_context, objectHandle.c_str(), m_ownership ),
 				// 3delight doesn't allow edits to cameras or outputs while the
 				// render is running, so we must use a custom deleter to stop
 				// the render just before the camera is deleted. This also allows
@@ -1131,39 +1263,9 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 				m_context,
 				name,
 				cameraHandle,
-				ownership()
+				m_ownership,
+				m_root
 			);
-			result->attributes( attributes );
-			return result;
-		}
-
-		ObjectInterfacePtr light( const std::string &name, const IECore::Object *object, const AttributesInterface *attributes ) override
-		{
-			return this->object( name, object, attributes );
-		}
-
-		Renderer::ObjectInterfacePtr object( const std::string &name, const IECore::Object *object, const AttributesInterface *attributes ) override
-		{
-			DelightHandleSharedPtr instance = m_instanceCache->get( object );
-			if( !instance )
-			{
-				return nullptr;
-			}
-
-			ObjectInterfacePtr result = new DelightObject( m_context, name, instance, ownership() );
-			result->attributes( attributes );
-			return result;
-		}
-
-		ObjectInterfacePtr object( const std::string &name, const std::vector<const IECore::Object *> &samples, const std::vector<float> &times, const AttributesInterface *attributes ) override
-		{
-			DelightHandleSharedPtr instance = m_instanceCache->get( samples, times );
-			if( !instance )
-			{
-				return nullptr;
-			}
-
-			ObjectInterfacePtr result = new DelightObject( m_context, name, instance, ownership() );
 			result->attributes( attributes );
 			return result;
 		}
@@ -1235,9 +1337,21 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 
 	private :
 
-		DelightHandle::Ownership ownership() const
+		static NSIContext_t createContext( RenderType renderType, const std::string &fileName )
 		{
-			return m_renderType == Interactive ? DelightHandle::Owned : DelightHandle::Unowned;
+			vector<NSIParam_t> params;
+
+			const char *apistream = "apistream";
+			const char *fileNamePtr = fileName.c_str();
+			if( renderType == SceneDescription )
+			{
+				params = {
+					{ "type", &apistream, NSITypeString, 0, 1 },
+					{ "streamfilename", &fileNamePtr, NSITypeString , 0, 1 }//,
+				};
+			}
+
+			return NSIBegin( params.size(), params.data() );
 		}
 
 		void stop()
@@ -1299,7 +1413,7 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 				}
 				cameraHandle = "ieCoreDelight:defaultCamera";
 				m_defaultCamera = DelightHandle(
-					m_context, cameraHandle, ownership(),
+					m_context, cameraHandle, m_ownership,
 					"orthographiccamera"
 				);
 
@@ -1344,7 +1458,6 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 			delete handle;
 		}
 
-		NSIContext_t m_context;
 		RenderType m_renderType;
 
 		int m_frame;
@@ -1352,9 +1465,6 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 		int m_oversampling;
 
 		bool m_rendering = false;
-
-		InstanceCachePtr m_instanceCache;
-		AttributesCachePtr m_attributesCache;
 
 		unordered_map<InternedString, ConstDelightOutputPtr> m_outputs;
 
