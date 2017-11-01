@@ -50,6 +50,8 @@
 #include "IECore/SearchPath.h"
 #include "IECore/LRUCache.h"
 
+#include "Gaffer/StringAlgo.h"
+
 #include "GafferScene/Private/IECoreScenePreview/Renderer.h"
 
 #include "GafferDelight/IECoreDelightPreview/ParameterList.h"
@@ -246,6 +248,8 @@ class DelightOutput : public IECore::RefCounted
 		DelightOutput( NSIContext_t context, const std::string &name, const IECoreScenePreview::Renderer::Output *output, DelightHandle::Ownership ownership )
 			:	m_context( context )
 		{
+			// Driver
+
 			const char *typePtr = output->getType().c_str();
 			const char *namePtr = output->getName().c_str();
 
@@ -255,22 +259,74 @@ class DelightOutput : public IECore::RefCounted
 
 			m_driverHandle = DelightHandle( context, "outputDriver:" + name, ownership, "outputdriver", driverParams );
 
-			const char *ciPtr = "Ci";
-			const char *shaderPtr = "shader";
-			const char *rgbaPtr = "rgba";
-			const char *linearPtr = "linear";
-			const char *layerTypePtr = "color";
-			const char *scalarFormatPtr = scalarFormat( output );
-			const int one = 1;
-			ParameterList layerParams = {
-				{ "variablename", &ciPtr, NSITypeString, 0, 1 },
-				{ "variablesource", &shaderPtr, NSITypeString, 0, 1 },
-				{ "layertype", &layerTypePtr, NSITypeString, 0, 1 },
-				{ "layername", &rgbaPtr, NSITypeString, 0, 1 },
-				{ "colorprofile", &linearPtr, NSITypeString, 0, 1 },
-				{ "withalpha", &one, NSITypeInteger, 0, 1 },
-				{ "scalarformat", &scalarFormatPtr, NSITypeString, 0, 1 }
-			};
+			// Layer
+
+			string variableName;
+			string variableSource;
+			string layerType;
+			string layerName;
+			int withAlpha = 0;
+
+			vector<string> tokens;
+			Gaffer::StringAlgo::tokenize( output->getData(), ' ', tokens );
+			if( tokens.size() == 1 )
+			{
+				if( tokens[0] == "rgb" || tokens[0] == "rgba" )
+				{
+					variableName = "Ci";
+					variableSource = "shader";
+					layerType = "color";
+					withAlpha = tokens[0] == "rgba" ? 1 : 0;
+				}
+				else if( tokens[0] == "z" || tokens[0] == "a" )
+				{
+					variableName = tokens[0] == "a" ? "alpha" : tokens[0];
+					variableSource = "builtin";
+					layerType = "scalar";
+				}
+			}
+			else if( tokens.size() == 2 )
+			{
+				if( tokens[0] == "float" )
+				{
+					layerType = "scalar";
+				}
+				else if( tokens[0] == "point" )
+				{
+					layerType = "vector";
+				}
+				else
+				{
+					layerType = tokens[0];
+				}
+
+				vector<string> nameTokens;
+				Gaffer::StringAlgo::tokenize( tokens[1], ':', nameTokens );
+				if( nameTokens.size() == 1 )
+				{
+					variableName = nameTokens[0];
+					variableSource = "shader";
+				}
+				else if( nameTokens.size() == 2 )
+				{
+					variableName = nameTokens[1];
+					variableSource = nameTokens[0];
+				}
+				layerName = variableName;
+			}
+
+			ParameterList layerParams;
+
+			layerParams.add( "variablename", variableName );
+			layerParams.add( "variablesource", variableSource );
+			layerParams.add( "layertype", layerType );
+			layerParams.add( "layername", layerName );
+			layerParams.add( { "withalpha", &withAlpha, NSITypeInteger, 0, 1 } );
+
+			const string scalarFormat = this->scalarFormat( output );
+			const string colorProfile = scalarFormat == "float" ? "linear" : "sRGB";
+			layerParams.add( "scalarformat", scalarFormat );
+			layerParams.add( "colorprofile", colorProfile );
 
 			m_layerHandle = DelightHandle( context, "outputLayer:" + name, ownership, "outputlayer", layerParams );
 
