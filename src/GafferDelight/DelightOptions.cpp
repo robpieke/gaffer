@@ -53,6 +53,7 @@ DelightOptions::DelightOptions( const std::string &name )
 
 	// Quality
 
+	options->addOptionalMember( "dl:oversampling", new IECore::IntData( 9 ), "oversampling", Gaffer::Plug::Default, false );
 	options->addOptionalMember( "dl:quality.shadingsamples", new IECore::IntData( 64 ), "shadingSamples", Gaffer::Plug::Default, false );
 
 	// Ray depth
