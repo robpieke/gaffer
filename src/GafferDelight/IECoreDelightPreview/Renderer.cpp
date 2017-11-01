@@ -959,6 +959,7 @@ namespace
 IECore::InternedString g_frameOptionName( "frame" );
 IECore::InternedString g_cameraOptionName( "camera" );
 IECore::InternedString g_sampleMotionOptionName( "sampleMotion" );
+IECore::InternedString g_oversamplingOptionName( "dl:oversampling" );
 
 IE_CORE_FORWARDDECLARE( DelightRenderer )
 
@@ -968,7 +969,7 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 	public :
 
 		DelightRenderer( RenderType renderType, const std::string &fileName )
-			:	m_renderType( renderType ), m_frame( 1 )
+			:	m_renderType( renderType ), m_frame( 1 ), m_oversampling( 9 )
 		{
 			vector<NSIParam_t> params;
 
@@ -1031,6 +1032,28 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 				else
 				{
 					m_camera = "";
+				}
+			}
+			else if( name == g_oversamplingOptionName )
+			{
+				if( value )
+				{
+					if( const IntData *d = reportedCast<const IntData>( value, "oversampling", name ) )
+					{
+						if( m_oversampling != d->readable() )
+						{
+							stop();
+							m_oversampling = d->readable();
+						}
+					}
+					else
+					{
+						m_oversampling = 9;
+					}
+				}
+				else
+				{
+					m_oversampling = 9;
 				}
 			}
 			else if( boost::starts_with( name.string(), "dl:" ) )
@@ -1292,7 +1315,12 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 				m_defaultCamera.reset();
 			}
 
-			// Connect the outputs up to the camera
+			// Set the oversampling, and connect the outputs up to the camera
+
+			ParameterList cameraParameters = {
+				{ "oversampling", &m_oversampling, NSITypeInteger, 0, 1 }
+			};
+			NSISetAttribute( m_context, cameraHandle.c_str(), cameraParameters.size(), cameraParameters.data() );
 
 			for( const auto &output : m_outputs )
 			{
@@ -1321,6 +1349,7 @@ class DelightRenderer final : public IECoreScenePreview::Renderer
 
 		int m_frame;
 		string m_camera;
+		int m_oversampling;
 
 		bool m_rendering = false;
 
