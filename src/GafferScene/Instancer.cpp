@@ -42,8 +42,11 @@
 
 #include "IECoreScene/Primitive.h"
 
+#include "IECore/DateTimeData.h"
 #include "IECore/MessageHandler.h"
 #include "IECore/NullObject.h"
+#include "IECore/SplineData.h"
+#include "IECore/TransformationMatrixData.h"
 #include "IECore/VectorTypedData.h"
 
 #include "boost/lexical_cast.hpp"
@@ -51,13 +54,189 @@
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_reduce.h"
 
+#include <functional>
+
 using namespace std;
+using namespace std::placeholders;
 using namespace tbb;
 using namespace Imath;
 using namespace IECore;
 using namespace IECoreScene;
 using namespace Gaffer;
 using namespace GafferScene;
+
+//////////////////////////////////////////////////////////////////////////
+// Internal utilities
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+
+// Prototype for a new `IECore::DataAlgo::dispatch()` method to replace
+// `IECore::despatchTypedData()`. The latter baffles me every time I come
+// to use it, what with its multiple overloads and Enablers and ErrorHandlers.
+// This is based on a much simpler principle : downcast to the right type
+// and call the functor. We can then use the familiar C++ overload resolution
+// rules to do the work of enablers and error handlers in the functor itself.
+/// \todo Provide const version.
+template<class Functor>
+typename std::result_of<Functor( Data * )>::type dispatch( Data *data, Functor &functor )
+{
+	switch( data->typeId() )
+	{
+		case BoolDataTypeId :
+			return functor( static_cast<BoolData *>( data ) );
+		case FloatDataTypeId :
+			return functor( static_cast<FloatData *>( data ) );
+		case DoubleDataTypeId :
+			return functor( static_cast<DoubleData *>( data ) );
+		case IntDataTypeId :
+			return functor( static_cast<IntData *>( data ) );
+		case UIntDataTypeId :
+			return functor( static_cast<UIntData *>( data ) );
+		case CharDataTypeId :
+			return functor( static_cast<CharData *>( data ) );
+		case UCharDataTypeId :
+			return functor( static_cast<UCharData *>( data ) );
+		case ShortDataTypeId :
+			return functor( static_cast<ShortData *>( data ) );
+		case UShortDataTypeId :
+			return functor( static_cast<UShortData *>( data ) );
+		case Int64DataTypeId :
+			return functor( static_cast<Int64Data *>( data ) );
+		case UInt64DataTypeId :
+			return functor( static_cast<UInt64Data *>( data ) );
+		case StringDataTypeId :
+			return functor( static_cast<StringData *>( data ) );
+		case InternedStringDataTypeId :
+			return functor( static_cast<InternedStringData *>( data ) );
+		case HalfDataTypeId :
+			return functor( static_cast<HalfData *>( data ) );
+		case V2iDataTypeId :
+			return functor( static_cast<V2iData *>( data ) );
+		case V3iDataTypeId :
+			return functor( static_cast<V3iData *>( data ) );
+		case V2fDataTypeId :
+			return functor( static_cast<V2fData *>( data ) );
+		case V3fDataTypeId :
+			return functor( static_cast<V3fData *>( data ) );
+		case V2dDataTypeId :
+			return functor( static_cast<V2dData *>( data ) );
+		case V3dDataTypeId :
+			return functor( static_cast<V3dData *>( data ) );
+		case Color3fDataTypeId :
+			return functor( static_cast<Color3fData *>( data ) );
+		case Color4fDataTypeId :
+			return functor( static_cast<Color4fData *>( data ) );
+		case Box2iDataTypeId :
+			return functor( static_cast<Box2iData *>( data ) );
+		case Box2fDataTypeId :
+			return functor( static_cast<Box2fData *>( data ) );
+		case Box3fDataTypeId :
+			return functor( static_cast<Box3fData *>( data ) );
+		case Box2dDataTypeId :
+			return functor( static_cast<Box2dData *>( data ) );
+		case Box3dDataTypeId :
+			return functor( static_cast<Box3dData *>( data ) );
+		case M33fDataTypeId :
+			return functor( static_cast<M33fData *>( data ) );
+		case M33dDataTypeId :
+			return functor( static_cast<M33dData *>( data ) );
+		case M44fDataTypeId :
+			return functor( static_cast<M44fData *>( data ) );
+		case M44dDataTypeId :
+			return functor( static_cast<M44dData *>( data ) );
+		case TransformationMatrixfDataTypeId :
+			return functor( static_cast<TransformationMatrixfData *>( data ) );
+		case TransformationMatrixdDataTypeId :
+			return functor( static_cast<TransformationMatrixdData *>( data ) );
+		case QuatfDataTypeId :
+			return functor( static_cast<QuatfData *>( data ) );
+		case QuatdDataTypeId :
+			return functor( static_cast<QuatdData *>( data ) );
+		case SplineffDataTypeId :
+			return functor( static_cast<SplineffData *>( data ) );
+		case SplineddDataTypeId :
+			return functor( static_cast<SplineddData *>( data ) );
+		case SplinefColor3fDataTypeId :
+			return functor( static_cast<SplinefColor3fData *>( data ) );
+		case SplinefColor4fDataTypeId :
+			return functor( static_cast<SplinefColor4fData *>( data ) );
+		case DateTimeDataTypeId :
+			return functor( static_cast<DateTimeData *>( data ) );
+		case BoolVectorDataTypeId :
+			return functor( static_cast<BoolVectorData *>( data ) );
+		case FloatVectorDataTypeId :
+			return functor( static_cast<FloatVectorData *>( data ) );
+		case DoubleVectorDataTypeId :
+			return functor( static_cast<DoubleVectorData *>( data ) );
+		case HalfVectorDataTypeId :
+			return functor( static_cast<HalfVectorData *>( data ) );
+		case IntVectorDataTypeId :
+			return functor( static_cast<IntVectorData *>( data ) );
+		case UIntVectorDataTypeId :
+			return functor( static_cast<UIntVectorData *>( data ) );
+		case CharVectorDataTypeId :
+			return functor( static_cast<CharVectorData *>( data ) );
+		case UCharVectorDataTypeId :
+			return functor( static_cast<UCharVectorData *>( data ) );
+		case ShortVectorDataTypeId :
+			return functor( static_cast<ShortVectorData *>( data ) );
+		case UShortVectorDataTypeId :
+			return functor( static_cast<UShortVectorData *>( data ) );
+		case Int64VectorDataTypeId :
+			return functor( static_cast<Int64VectorData *>( data ) );
+		case UInt64VectorDataTypeId :
+			return functor( static_cast<UInt64VectorData *>( data ) );
+		case StringVectorDataTypeId :
+			return functor( static_cast<StringVectorData *>( data ) );
+		case InternedStringVectorDataTypeId :
+			return functor( static_cast<InternedStringVectorData *>( data ) );
+		case V2iVectorDataTypeId :
+			return functor( static_cast<V2iVectorData *>( data ) );
+		case V2fVectorDataTypeId :
+			return functor( static_cast<V2fVectorData *>( data ) );
+		case V2dVectorDataTypeId :
+			return functor( static_cast<V2dVectorData *>( data ) );
+		case V3iVectorDataTypeId :
+			return functor( static_cast<V3iVectorData *>( data ) );
+		case V3fVectorDataTypeId :
+			return functor( static_cast<V3fVectorData *>( data ) );
+		case V3dVectorDataTypeId :
+			return functor( static_cast<V3dVectorData *>( data ) );
+		case Box3fVectorDataTypeId :
+			return functor( static_cast<Box3fVectorData *>( data ) );
+		case Box3dVectorDataTypeId :
+			return functor( static_cast<Box3dVectorData *>( data ) );
+		case M33fVectorDataTypeId :
+			return functor( static_cast<M33fVectorData *>( data ) );
+		case M33dVectorDataTypeId :
+			return functor( static_cast<M33dVectorData *>( data ) );
+		case M44fVectorDataTypeId :
+			return functor( static_cast<M44fVectorData *>( data ) );
+		case M44dVectorDataTypeId :
+			return functor( static_cast<M44dVectorData *>( data ) );
+		case QuatfVectorDataTypeId :
+			return functor( static_cast<QuatfVectorData *>( data ) );
+		case QuatdVectorDataTypeId :
+			return functor( static_cast<QuatdVectorData *>( data ) );
+		case Color3fVectorDataTypeId :
+			return functor( static_cast<Color3fVectorData *>( data ) );
+		case Color4fVectorDataTypeId :
+			return functor( static_cast<Color4fVectorData *>( data ) );
+		default :
+			throw InvalidArgumentException( "Data has unknown type" );
+	}
+}
+
+template<class Functor>
+typename std::result_of<Functor( Data * )>::type dispatch( Data *data )
+{
+	Functor f;
+	return dispatch( data, f );
+}
+
+} // namespace
 
 //////////////////////////////////////////////////////////////////////////
 // EngineData
@@ -76,7 +255,8 @@ class Instancer::EngineData : public Data
 			const std::string &index,
 			const std::string &position,
 			const std::string &orientation,
-			const std::string &scale
+			const std::string &scale,
+			const std::string &attributes
 		)
 			:	m_indices( nullptr ),
 				m_positions( nullptr ),
@@ -133,6 +313,8 @@ class Instancer::EngineData : public Data
 					throw IECore::Exception( "Scale primitive variable has incorrect size" );
 				}
 			}
+
+			initAttributes( attributes );
 		}
 
 		size_t numInstances() const
@@ -167,6 +349,21 @@ class Instancer::EngineData : public Data
 			return result;
 		}
 
+		CompoundObjectPtr instanceAttributes( size_t instanceIndex ) const
+		{
+			if( m_attributeCreators.empty() )
+			{
+				return nullptr;
+			}
+			CompoundObjectPtr result = new CompoundObject;
+			CompoundObject::ObjectMap &writableResult = result->members();
+			for( const auto &attributeCreator : m_attributeCreators )
+			{
+				writableResult[attributeCreator.first] = attributeCreator.second( instanceIndex );
+			}
+			return result;
+		}
+
 	protected :
 
 		void copyFrom( const Object *other, CopyContext *context ) override
@@ -189,12 +386,70 @@ class Instancer::EngineData : public Data
 
 	private :
 
+		typedef std::function<DataPtr ( size_t )> AttributeCreator;
+
+		struct MakeAttributeCreator
+		{
+
+			template<typename T>
+			AttributeCreator operator()( const TypedData<vector<T>> *data )
+			{
+				return std::bind( &createAttribute<T>, data->readable(), ::_1 );
+			}
+
+			template<typename T>
+			AttributeCreator operator()( const GeometricTypedData<vector<T>> *data )
+			{
+				return std::bind( &createGeometricAttribute<T>, data->readable(), data->getInterpretation(), ::_1 );
+			}
+
+			AttributeCreator operator()( const Data *data )
+			{
+				throw IECore::InvalidArgumentException( "Expected VectorTypedData" );
+			}
+
+			private :
+
+				template<typename T>
+				static DataPtr createAttribute( const vector<T> &values, size_t index )
+				{
+					return new TypedData<T>( values[index] );
+				}
+
+				template<typename T>
+				static DataPtr createGeometricAttribute( const vector<T> &values, GeometricData::Interpretation interpretation, size_t index )
+				{
+					return new GeometricTypedData<T>( values[index], interpretation );
+				}
+
+		};
+
+		void initAttributes( const std::string &attributes )
+		{
+			for( auto &primVar : m_primitive->variables )
+			{
+				if( primVar.second.interpolation != PrimitiveVariable::Vertex )
+				{
+					continue;
+				}
+				if( !StringAlgo::matchMultiple( primVar.first, attributes ) )
+				{
+					continue;
+				}
+				DataPtr d = primVar.second.expandedData();
+				AttributeCreator attributeCreator = dispatch<MakeAttributeCreator>( d.get() );
+				m_attributeCreators[primVar.first] = attributeCreator;
+			}
+		}
+
 		IECoreScene::ConstPrimitivePtr m_primitive;
 		const std::vector<int> *m_indices;
 		const std::vector<Imath::V3f> *m_positions;
 		const std::vector<Imath::Quatf> *m_orientations;
 		const std::vector<Imath::V3f> *m_scales;
 		const std::vector<float> *m_uniformScales;
+
+		boost::container::flat_map<InternedString, AttributeCreator> m_attributeCreators;
 
 };
 
@@ -218,6 +473,7 @@ Instancer::Instancer( const std::string &name )
 	addChild( new StringPlug( "position", Plug::In, "P" ) );
 	addChild( new StringPlug( "orientation", Plug::In ) );
 	addChild( new StringPlug( "scale", Plug::In ) );
+	addChild( new StringPlug( "attributes", Plug::In ) );
 	addChild( new ObjectPlug( "__engine", Plug::Out, NullObject::defaultNullObject() ) );
 	addChild( new AtomicCompoundDataPlug( "__instanceChildNames", Plug::Out, new CompoundData ) );
 }
@@ -286,24 +542,34 @@ const Gaffer::StringPlug *Instancer::scalePlug() const
 	return getChild<StringPlug>( g_firstPlugIndex + 5 );
 }
 
+Gaffer::StringPlug *Instancer::attributesPlug()
+{
+	return getChild<StringPlug>( g_firstPlugIndex + 6 );
+}
+
+const Gaffer::StringPlug *Instancer::attributesPlug() const
+{
+	return getChild<StringPlug>( g_firstPlugIndex + 6 );
+}
+
 Gaffer::ObjectPlug *Instancer::enginePlug()
 {
-	return getChild<ObjectPlug>( g_firstPlugIndex + 6 );
+	return getChild<ObjectPlug>( g_firstPlugIndex + 7 );
 }
 
 const Gaffer::ObjectPlug *Instancer::enginePlug() const
 {
-	return getChild<ObjectPlug>( g_firstPlugIndex + 6 );
+	return getChild<ObjectPlug>( g_firstPlugIndex + 7 );
 }
 
 Gaffer::AtomicCompoundDataPlug *Instancer::instanceChildNamesPlug()
 {
-	return getChild<AtomicCompoundDataPlug>( g_firstPlugIndex + 7 );
+	return getChild<AtomicCompoundDataPlug>( g_firstPlugIndex + 8 );
 }
 
 const Gaffer::AtomicCompoundDataPlug *Instancer::instanceChildNamesPlug() const
 {
-	return getChild<AtomicCompoundDataPlug>( g_firstPlugIndex + 7 );
+	return getChild<AtomicCompoundDataPlug>( g_firstPlugIndex + 8 );
 }
 
 void Instancer::affects( const Plug *input, AffectedPlugsContainer &outputs ) const
@@ -314,7 +580,8 @@ void Instancer::affects( const Plug *input, AffectedPlugsContainer &outputs ) co
 		input == inPlug()->objectPlug() ||
 		input == positionPlug() ||
 		input == orientationPlug() ||
-		input == scalePlug()
+		input == scalePlug() ||
+		input == attributesPlug()
 	)
 	{
 		outputs.push_back( enginePlug() );
@@ -361,7 +628,10 @@ void Instancer::affects( const Plug *input, AffectedPlugsContainer &outputs ) co
 		outputs.push_back( outPlug()->objectPlug() );
 	}
 
-	if( input == instancesPlug()->attributesPlug() )
+	if(
+		input == instancesPlug()->attributesPlug() ||
+		input == enginePlug()
+	)
 	{
 		outputs.push_back( outPlug()->attributesPlug() );
 	}
@@ -377,6 +647,7 @@ void Instancer::hash( const Gaffer::ValuePlug *output, const Gaffer::Context *co
 		positionPlug()->hash( h );
 		orientationPlug()->hash( h );
 		scalePlug()->hash( h );
+		attributesPlug()->hash( h );
 	}
 	else if( output == instanceChildNamesPlug() )
 	{
@@ -398,7 +669,8 @@ void Instancer::compute( Gaffer::ValuePlug *output, const Gaffer::Context *conte
 				indexPlug()->getValue(),
 				positionPlug()->getValue(),
 				orientationPlug()->getValue(),
-				scalePlug()->getValue()
+				scalePlug()->getValue(),
+				attributesPlug()->getValue()
 			)
 		);
 		return;
@@ -598,6 +870,17 @@ void Instancer::hashBranchAttributes( const ScenePath &parentPath, const ScenePa
 		// "/" or "/instances" or "/instances/<instanceName>"
 		h = outPlug()->attributesPlug()->defaultValue()->Object::hash();
 	}
+	else if( branchPath.size() == 3 )
+	{
+		// "/instances/<instanceName>/<id>"
+		BranchCreator::hashBranchAttributes( parentPath, branchPath, context, h );
+		{
+			InstanceScope instanceScope( context, branchPath );
+			instancesPlug()->attributesPlug()->hash( h );
+			engineHash( parentPath, context, h );
+			h.append( instanceIndex( branchPath ) );
+		}
+	}
 	else
 	{
 		// "/instances/<instanceName>/<id>/...
@@ -612,6 +895,31 @@ IECore::ConstCompoundObjectPtr Instancer::computeBranchAttributes( const ScenePa
 	{
 		// "/" or "/instances" or "/instances/<instanceName>"
 		return outPlug()->attributesPlug()->defaultValue();
+	}
+	else if( branchPath.size() == 3 )
+	{
+		// "/instances/<instanceName>/<id>"
+		ConstCompoundObjectPtr baseAttributes;
+		{
+			InstanceScope instanceScope( context, branchPath );
+			baseAttributes = instancesPlug()->attributesPlug()->getValue();
+		}
+
+		ConstEngineDataPtr e = engine( parentPath, context );
+		const int index = instanceIndex( branchPath );
+		CompoundObjectPtr attributes = e->instanceAttributes( index );
+		if( !attributes )
+		{
+			return baseAttributes;
+		}
+
+		CompoundObject::ObjectMap &writableAttributes = attributes->members();
+		for( auto &attribute : baseAttributes->members() )
+		{
+			writableAttributes.insert( attribute );
+		}
+
+		return attributes;
 	}
 	else
 	{
