@@ -81,7 +81,7 @@ class BoolWidget( GafferUI.Widget ) :
 			self._qtWidget().setIcon( QtGui.QIcon() )
 		else :
 			self._qtWidget().setIcon( QtGui.QIcon( self.__image._qtPixmap() ) )
-			self._qtWidget().setIconSize( self.__image._qtPixmap().size() )
+			self._qtWidget().setIconSize( self.__image._qtPixmap().size() / self.__image._qtPixmap().devicePixelRatio() )
 
 	def getImage( self ) :
 

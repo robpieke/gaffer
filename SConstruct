@@ -1131,6 +1131,16 @@ def buildGraphics( target, source, env ) :
 				),
 				shell = True,
 			)
+			subprocess.check_call(
+				env["INKSCAPE"] + " --export-png=%s/%s@2x.png --export-id=%s --export-width=%d --export-height=%d %s --export-background-opacity=0" % (
+					dir,
+					tokens[0].split( ":" )[-1],
+					tokens[0],
+					int( round( float( tokens[3] ) ) ) * 2, int( round( float( tokens[4] ) ) ) * 2,
+					svgFileName,
+				),
+				shell = True,
+			)
 
 if haveInkscape :
 

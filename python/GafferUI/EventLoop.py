@@ -158,6 +158,7 @@ class EventLoop( object ) :
 		# our icons can come out the wrong size).
 		QtWidgets.QApplication.setStyle( "plastique" )
 		__qtApplication = QtWidgets.QApplication( [ "gaffer" ] )
+		__qtApplication.setAttribute( QtCore.Qt.AA_UseHighDpiPixmaps )
 
 	__mainEventLoop = None
 	## Returns the main event loop for the application. This should always

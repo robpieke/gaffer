@@ -108,7 +108,10 @@ class Image( GafferUI.Widget ) :
 		)
 		del painter # must delete painter before image
 
-		return QtGui.QPixmap( image )
+		result = QtGui.QPixmap( image )
+		result.setDevicePixelRatio( pixmap.devicePixelRatio() )
+
+		return result
 
 	@staticmethod
 	def _qtPixmapFromImagePrimitive( image ) :
@@ -173,9 +176,16 @@ class Image( GafferUI.Widget ) :
 	@classmethod
 	def __cacheGetter( cls, fileName ) :
 
-		resolvedFileName = cls.__imageSearchPaths.find( fileName )
+		s = os.path.splitext( fileName )
+		highDPIFileName = s[0] + "@2x" + s[1]
+		resolvedFileName = cls.__imageSearchPaths.find( highDPIFileName )
+
+		devicePixelRatio = 2
 		if not resolvedFileName :
-			raise Exception( "Unable to find file \"%s\"" % fileName )
+			devicePixelRatio = 1
+			resolvedFileName = cls.__imageSearchPaths.find( fileName )
+			if not resolvedFileName :
+				raise Exception( "Unable to find file \"%s\"" % fileName )
 
 		reader = IECore.Reader.create( resolvedFileName )
 
@@ -186,5 +196,7 @@ class Image( GafferUI.Widget ) :
 		result = cls._qtPixmapFromImagePrimitive( image )
 
 		cost = result.width() * result.height() * ( 4 if result.hasAlpha() else 3 )
+
+		result.setDevicePixelRatio( devicePixelRatio )
 
 		return ( result, cost )
