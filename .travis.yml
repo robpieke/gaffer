@@ -19,6 +19,8 @@ addons:
         - g++-4.8
         - gcc-6
         - g++-6
+        - g++-7
+
 
 cache:
     directories:
@@ -90,5 +92,7 @@ matrix:
           env: COMPILER=g++-4.8 CXXSTD=c++11 DEBUG=1
         - os: linux
           env: COMPILER=g++-6 CXXSTD=c++14 DEBUG=0
+        - os: linux
+          env: COMPILER=g++-7 CXXSTD=c++14 DEBUG=0
         - os: osx
           env: COMPILER=clang++ CXXSTD=c++11 DEBUG=0
