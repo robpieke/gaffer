@@ -707,15 +707,15 @@ class LayoutEngine
 		{
 			// Offsets of plugs relative to
 			// parent node origin.
-			V2f sourceOffset;
-			V2f targetOffset;
+			V2f sourceOffset = V2f( 0.0f );
+			V2f targetOffset = V2f( 0.0f );
 
-			Direction sourceTangent;
-			Direction targetTangent;
-			Direction idealDirection;
+			Direction sourceTangent = Direction( 0 );
+			Direction targetTangent = Direction( 0 );
+			Direction idealDirection = Direction( 0 );
 
 			// True if edge is representing an auxiliary connection
-			bool auxiliary;
+			bool auxiliary = false;
 		};
 
 		typedef boost::adjacency_list<boost::listS, boost::listS, boost::bidirectionalS, Vertex, Edge> Graph;
