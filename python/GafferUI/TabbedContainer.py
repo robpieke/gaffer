@@ -70,7 +70,7 @@ class TabbedContainer( GafferUI.ContainerWidget ) :
 		self._qtWidget().setTabBar( self.__tabBar._qtWidget() )
 
 		self._qtWidget().setUsesScrollButtons( False )
-		self._qtWidget().setElideMode( QtCore.Qt.ElideNone )
+		self._qtWidget().setElideMode( QtCore.Qt.ElideRight )
 
 		self.__widgets = []
 
