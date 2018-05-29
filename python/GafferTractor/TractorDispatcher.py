@@ -181,11 +181,9 @@ class TractorDispatcher( GafferDispatch.Dispatcher ) :
 
 			tractorPlug = batch.node()["dispatcher"].getChild( "tractor" )
 			if tractorPlug is not None :
-				## \todo Remove these manual substitutions once #887 is resolved.
-				# Note though that we will need to use `with batch.context()` to
-				# ensure the substitutions occur in the right context.
-				command.service = batch.context().substitute( tractorPlug["service"].getValue() )
-				command.tags = batch.context().substitute( tractorPlug["tags"].getValue() ).split()
+				with batch.context() :
+					command.service = tractorPlug["service"].getValue()
+					command.tags = tractorPlug["tags"].getValue().split()
 
 		# Remember the task for next time, and return it.
 

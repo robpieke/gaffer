@@ -39,6 +39,8 @@ import unittest
 
 import tractor.api.author as author
 
+import IECore
+
 import Gaffer
 import GafferTest
 import GafferDispatch
@@ -137,6 +139,30 @@ class TractorDispatcherTest( GafferTest.TestCase ) :
 		command = task.cmds[0]
 		self.assertEqual( command.service, "myService" )
 		self.assertEqual( command.tags, [ "myTag1", "myTag2" ] )
+
+	def testTaskAttributeSustitutions( self ) :
+
+		s = Gaffer.ScriptNode()
+		s["n"] = GafferDispatch.SystemCommand()
+		s["n"]["command"].setValue( "ls" )
+		s["n"]["dispatcher"]["tractor"]["service"].setValue( "${myService}" )
+		s["n"]["dispatcher"]["tractor"]["tags"].setValue( "${myTag}" )
+
+		s["variables"].addMember( "myTag", IECore.StringData( "thisIsMyTag" ) )
+		s["variables"].addMember( "myService", IECore.StringData( "thisIsMyService" ) )
+
+		with s.context() :
+			job = self.__job( [ s["n"] ], self.__dispatcher() )
+
+		self.assertEqual( len( job.subtasks ), 1 )
+
+		task = job.subtasks[0]
+		self.assertEqual( task.title, "n 1" )
+
+		self.assertEqual( len( task.cmds ), 1 )
+		command = task.cmds[0]
+		self.assertEqual( command.service, "thisIsMyService" )
+		self.assertEqual( command.tags, [ "thisIsMyTag" ] )
 
 	def testPreTasks( self ) :
 
