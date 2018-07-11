@@ -269,6 +269,22 @@ if [[ -n $DELIGHT ]] ; then
 
 fi
 
+# Set up RenderMan
+##########################################################################
+
+if [[ -n $RMANTREE ]] ; then
+
+	if [[ `uname` = "Linux" ]] ; then
+		appendToPath "$RMANTREE/lib" LD_LIBRARY_PATH
+	else
+		appendToPath "$RMANTREE/lib" DYLD_LIBRARY_PATH
+	fi
+
+	appendToPath "$RMANTREE/bin" PYTHONPATH
+	appendToPath "$RMANTREE/lib/plugins" RMAN_RIXPLUGINPATH
+
+fi
+
 # Set up 3rd Party extensions
 ##########################################################################
 
