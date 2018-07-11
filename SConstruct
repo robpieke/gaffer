@@ -152,6 +152,12 @@ options.Add(
 )
 
 options.Add(
+	"RENDERMAN_ROOT",
+	"The directory in which RenderMan is installed",
+	"",
+)
+
+options.Add(
 	"VTUNE_ROOT",
 	"The directory in which VTune is installed.",
 	""
@@ -885,6 +891,25 @@ libraries = {
 	"GafferAppleseedUI" : {},
 
 	"GafferAppleseedUITest" : {},
+
+	"GafferRenderMan" : {
+		"envAppends" : {
+			"CPPPATH" : [ "$RENDERMAN_ROOT/include" ],
+			"LIBS" : [ "Gaffer", "GafferDispatch", "GafferScene", "IECoreScene", "prman" ],
+			"LIBPATH" : [ "$RENDERMAN_ROOT/lib" ],
+		},
+		"pythonEnvAppends" : {
+			"LIBS" : [ "GafferDispatch", "GafferRenderMan", "GafferScene" ],
+			"LIBPATH" : [ "$RENDERMAN_ROOT/lib" ],
+		},
+		"requiredOptions" : [ "RENDERMAN_ROOT" ],
+	},
+
+	"GafferRenderManTest" : {},
+
+	"GafferRenderManUI" : {},
+
+	"GafferRenderManUITest" : {},
 
 	"GafferTractor" : {},
 
