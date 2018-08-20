@@ -118,7 +118,7 @@ struct CompareV2fX{
 IE_CORE_DEFINERUNTIMETYPED( GraphGadget );
 
 GraphGadget::GraphGadget( Gaffer::NodePtr root, Gaffer::SetPtr filter )
-	:	m_dragStartPosition( 0 ), m_lastDragPosition( 0 ), m_dragMode( None ), m_dragReconnectCandidate( nullptr ), m_dragReconnectSrcNodule( nullptr ), m_dragReconnectDstNodule( nullptr )
+	:	m_dragStartPosition( 0 ), m_lastDragPosition( 0 ), m_dragMode( None ), m_dragReconnectCandidate( nullptr ), m_dragReconnectSrcNodule( nullptr ), m_dragReconnectDstNodule( nullptr ), m_dragMergeGroupId( 0 )
 {
 	keyPressSignal().connect( boost::bind( &GraphGadget::keyPressed, this, ::_1,  ::_2 ) );
 	buttonPressSignal().connect( boost::bind( &GraphGadget::buttonPress, this, ::_1,  ::_2 ) );
@@ -1066,6 +1066,7 @@ bool GraphGadget::dragEnter( GadgetPtr gadget, const DragDropEvent &event )
 	{
 		calculateDragSnapOffsets( m_scriptNode->selection() );
 
+		Gaffer::UndoScope undoScope( m_scriptNode, Gaffer::UndoScope::Enabled, dragMergeGroup() );
 		V2f pos = V2f( i.x, i.y );
 		offsetNodes( m_scriptNode->selection(), pos - m_lastDragPosition );
 		m_lastDragPosition = pos;
@@ -1148,6 +1149,7 @@ bool GraphGadget::dragMove( GadgetPtr gadget, const DragDropEvent &event )
 		}
 
 		// move all the nodes using the snapped offset
+		Gaffer::UndoScope undoScope( m_scriptNode, Gaffer::UndoScope::Enabled, dragMergeGroup() );
 		offsetNodes( m_scriptNode->selection(), pos - m_lastDragPosition );
 		m_lastDragPosition = pos;
 		updateDragReconnectCandidate( event );
@@ -1285,7 +1287,7 @@ bool GraphGadget::dragEnd( GadgetPtr gadget, const DragDropEvent &event )
 
 	if( dragMode == Moving && m_dragReconnectCandidate )
 	{
-		Gaffer::UndoScope undoScope( m_scriptNode );
+		Gaffer::UndoScope undoScope( m_scriptNode, Gaffer::UndoScope::Enabled, dragMergeGroup() );
 
 		m_dragReconnectDstNodule->plug()->setInput( m_dragReconnectCandidate->srcNodule()->plug() );
 		m_dragReconnectCandidate->dstNodule()->plug()->setInput( m_dragReconnectSrcNodule->plug() );
@@ -1299,6 +1301,7 @@ bool GraphGadget::dragEnd( GadgetPtr gadget, const DragDropEvent &event )
  		requestRender();
 	}
 
+	m_dragMergeGroupId++;
 	return true;
 }
 
@@ -1468,6 +1471,11 @@ void GraphGadget::updateDragSelection( bool dragEnd )
 			nodeGadget->setHighlighted( m_scriptNode->selection()->contains( it->first ) );
 		}
 	}
+}
+
+std::string GraphGadget::dragMergeGroup() const
+{
+	return boost::str( boost::format( "GraphGadget%1%%2%" ) % this % m_dragMergeGroupId );
 }
 
 void GraphGadget::updateGraph()

@@ -220,6 +220,7 @@ class GAFFERUI_API GraphGadget : public ContainerGadget
 		void calculateDragSnapOffsets( Gaffer::Set *nodes );
 		void offsetNodes( Gaffer::Set *nodes, const Imath::V2f &offset );
 		void updateDragSelection( bool dragEnd );
+		std::string dragMergeGroup() const;
 
 		void updateGraph();
 		/// May return nullptr if NodeGadget::create() returns nullptr, signifying that
@@ -287,6 +288,7 @@ class GAFFERUI_API GraphGadget : public ContainerGadget
 		Nodule *m_dragReconnectDstNodule;
 		std::vector<float> m_dragSnapOffsets[2]; // offsets in x and y
 		std::vector<Imath::V2f> m_dragSnapPoints; // specific points that are also target for point snapping
+		int m_dragMergeGroupId;
 
 		GraphLayoutPtr m_layout;
 
