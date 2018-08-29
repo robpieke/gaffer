@@ -121,6 +121,39 @@ class CurvePlugSerialiser : public ValuePlugSerialiser
 
 };
 
+template<typename T>
+T frameToTime( const Context *c, T frame )
+{
+	return frame / c->getFramesPerSecond();
+}
+
+template<typename T>
+T timeToFrame( const Context *c, T time )
+{
+	return time * c->getFramesPerSecond();
+}
+
+void testTicks()
+{
+	ContextPtr c = new Context();
+	for( float framesPerSecond : { 24.0, 25.0, 30.0, 48.0, 60.0 } )
+	{
+		c->setFramesPerSecond( framesPerSecond );
+		for( int frame = 0; frame < 100000; ++frame )
+		{
+			c->setFrame( frame );
+			// The time the NodeEditor will set keys at
+			float time = c->getTime();
+			// The proposed time the AnimationGadget will set keys at
+			float roundedTime = frameToTime( c.get(), round( timeToFrame( c.get(), time ) * 250 ) / 250.0 );
+			if( roundedTime != time )
+			{
+				printf( "BAD FRAME : %d (%ffps) time : %f rounded time : %f\n", frame, framesPerSecond, time, roundedTime );
+			}
+		}
+	}
+}
+
 } // namespace
 
 void GafferModule::bindAnimation()
@@ -133,6 +166,8 @@ void GafferModule::bindAnimation()
 		.staticmethod( "isAnimated" )
 		.def( "acquire", &Animation::acquire, return_value_policy<CastToIntrusivePtr>() )
 		.staticmethod( "acquire" )
+		.def( "testTicks", testTicks )
+		.staticmethod( "testTicks" )
 	;
 
 	enum_<Animation::Type>( "Type" )
