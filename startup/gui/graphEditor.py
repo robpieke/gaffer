@@ -114,3 +114,9 @@ def __connectionContextMenu( graphEditor, destinationPlug, menuDefinition ) :
 	GafferUI.GraphEditor.appendConnectionNavigationMenuDefinitions( graphEditor, destinationPlug, menuDefinition )
 
 GafferUI.GraphEditor.connectionContextMenuSignal().connect( __connectionContextMenu, scoped = False )
+
+def __instanceCreated( graphEditor ) :
+
+	graphEditor.graphGadgetWidget().addOverlay( GafferUI.GraphEditor.RootWidget( graphEditor ) )
+
+GafferUI.GraphEditor.instanceCreatedSignal().connect( __instanceCreated, scoped = False )
