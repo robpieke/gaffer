@@ -96,6 +96,15 @@ class GAFFERIMAGE_API ImageTransform : public ImageProcessor
 		Resample *resample();
 		const Resample *resample() const;
 
+		// Plugs used to concatenate transforms through a
+		// chain of connected ImageTransforms.
+		Gaffer::M33fPlug *inTransformPlug();
+		const Gaffer::M33fPlug *inTransformPlug() const;
+		Gaffer::M33fPlug *outTransformPlug();
+		const Gaffer::M33fPlug *outTransformPlug() const;
+
+		class ChainingScope;
+
 		enum Operation
 		{
 			Identity = 0,
@@ -106,6 +115,7 @@ class GAFFERIMAGE_API ImageTransform : public ImageProcessor
 
 		unsigned operation( Imath::M33f &matrix, Imath::M33f &resampleMatrix ) const;
 		Imath::Box2i sampler( unsigned op, const Imath::M33f &matrix, const Imath::M33f &resampleMatrix, const Imath::V2i &tileOrigin, const ImagePlug *&samplerImage, Imath::M33f &samplerMatrix ) const;
+		void plugInputChanged( Gaffer::Plug *plug );
 
 		static size_t g_firstPlugIndex;
 
