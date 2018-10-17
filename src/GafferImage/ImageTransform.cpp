@@ -106,7 +106,7 @@ class ImageTransform::ChainingScope : boost::noncopyable
 		{
 			if( !m_chained )
 			{
-				if( imageTransform->inTransformPlug()->getInput() )
+				if( imageTransform->inTransformPlug()->getInput() && imageTransform->concatenatePlug()->getValue() )
 				{
 					// We're the bottom of a chain. Tell the upstream
 					// nodes they've been chained.
@@ -116,10 +116,17 @@ class ImageTransform::ChainingScope : boost::noncopyable
 			}
 			else
 			{
-				if( !imageTransform->inTransformPlug()->getInput() )
+				const bool concatenate = imageTransform->concatenatePlug()->getValue();
+				m_chained = concatenate;
+				if(
+					!imageTransform->inTransformPlug()->getInput() ||
+					!concatenate
+				)
 				{
-					// We're at the top of a chain. Remove the context
-					// variable so it doesn't leak out to unrelated nodes.
+					// Either we're at the top of a chain, in which case we
+					// want to remove the context variable so it doesn't leak out
+					// to unrelated nodes. Or we want to break concatenation,
+					// in which case we need to do the same thing.
 					m_scope.emplace( context );
 					m_scope->remove( g_chainedContextName );
 				}
@@ -163,6 +170,7 @@ ImageTransform::ImageTransform( const std::string &name )
 
 	addChild( new Gaffer::Transform2DPlug( "transform" ) );
 	addChild( new StringPlug( "filter", Plug::In, "cubic" ) );
+	addChild( new BoolPlug( "concatenate", Plug::In, true ) );
 
 	// We use an internal Resample node to do filtered
 	// sampling of the translate and scale in one. Then,
@@ -216,54 +224,64 @@ const Gaffer::StringPlug *ImageTransform::filterPlug() const
 	return getChild<StringPlug>( g_firstPlugIndex + 1 );
 }
 
+Gaffer::BoolPlug *ImageTransform::concatenatePlug()
+{
+	return getChild<BoolPlug>( g_firstPlugIndex + 2 );
+}
+
+const Gaffer::BoolPlug *ImageTransform::concatenatePlug() const
+{
+	return getChild<BoolPlug>( g_firstPlugIndex + 2 );
+}
+
 Gaffer::M33fPlug *ImageTransform::resampleMatrixPlug()
 {
-	return getChild<M33fPlug>( g_firstPlugIndex + 2 );
+	return getChild<M33fPlug>( g_firstPlugIndex + 3 );
 }
 
 const Gaffer::M33fPlug *ImageTransform::resampleMatrixPlug() const
 {
-	return getChild<M33fPlug>( g_firstPlugIndex + 2 );
+	return getChild<M33fPlug>( g_firstPlugIndex + 3 );
 }
 
 Gaffer::M33fPlug *ImageTransform::inTransformPlug()
 {
-	return getChild<M33fPlug>( g_firstPlugIndex + 3 );
+	return getChild<M33fPlug>( g_firstPlugIndex + 4 );
 }
 
 const Gaffer::M33fPlug *ImageTransform::inTransformPlug() const
 {
-	return getChild<M33fPlug>( g_firstPlugIndex + 3 );
+	return getChild<M33fPlug>( g_firstPlugIndex + 4 );
 }
 
 Gaffer::M33fPlug *ImageTransform::outTransformPlug()
 {
-	return getChild<M33fPlug>( g_firstPlugIndex + 4 );
+	return getChild<M33fPlug>( g_firstPlugIndex + 5 );
 }
 
 const Gaffer::M33fPlug *ImageTransform::outTransformPlug() const
 {
-	return getChild<M33fPlug>( g_firstPlugIndex + 4 );
+	return getChild<M33fPlug>( g_firstPlugIndex + 5 );
 }
 
 ImagePlug *ImageTransform::resampledInPlug()
 {
-	return getChild<ImagePlug>( g_firstPlugIndex + 5 );
+	return getChild<ImagePlug>( g_firstPlugIndex + 6 );
 }
 
 const ImagePlug *ImageTransform::resampledInPlug() const
 {
-	return getChild<ImagePlug>( g_firstPlugIndex + 5 );
+	return getChild<ImagePlug>( g_firstPlugIndex + 6 );
 }
 
 Resample *ImageTransform::resample()
 {
-	return getChild<Resample>( g_firstPlugIndex + 6 );
+	return getChild<Resample>( g_firstPlugIndex + 7 );
 }
 
 const Resample *ImageTransform::resample() const
 {
-	return getChild<Resample>( g_firstPlugIndex + 6 );
+	return getChild<Resample>( g_firstPlugIndex + 7 );
 }
 
 void ImageTransform::affects( const Gaffer::Plug *input, AffectedPlugsContainer &outputs ) const
@@ -272,7 +290,8 @@ void ImageTransform::affects( const Gaffer::Plug *input, AffectedPlugsContainer 
 
 	if(
 		transformPlug()->isAncestorOf( input ) ||
-		input == inTransformPlug()
+		input == inTransformPlug() ||
+		input == concatenatePlug()
 	)
 	{
 		outputs.push_back( resampleMatrixPlug() );
@@ -282,7 +301,8 @@ void ImageTransform::affects( const Gaffer::Plug *input, AffectedPlugsContainer 
 		input == inPlug()->dataWindowPlug() ||
 		input == resampledInPlug()->dataWindowPlug() ||
 		transformPlug()->isAncestorOf( input ) ||
-		input == inTransformPlug()
+		input == inTransformPlug() ||
+		input == concatenatePlug()
 	)
 	{
 		outputs.push_back( outPlug()->dataWindowPlug() );
@@ -293,7 +313,8 @@ void ImageTransform::affects( const Gaffer::Plug *input, AffectedPlugsContainer 
 		input == inPlug()->dataWindowPlug() ||
 		input == resampledInPlug()->channelDataPlug() ||
 		transformPlug()->isAncestorOf( input ) ||
-		input == inTransformPlug()
+		input == inTransformPlug() ||
+		input == concatenatePlug()
 	)
 	{
 		outputs.push_back( outPlug()->channelDataPlug() );
@@ -302,7 +323,8 @@ void ImageTransform::affects( const Gaffer::Plug *input, AffectedPlugsContainer 
 	if(
 		transformPlug()->isAncestorOf( input ) ||
 		input == inTransformPlug() ||
-		input == enabledPlug()
+		input == enabledPlug() ||
+		input == concatenatePlug()
 	)
 	{
 		outputs.push_back( outTransformPlug() );
@@ -318,13 +340,21 @@ void ImageTransform::hash( const ValuePlug *output, const Context *context, IECo
 	{
 		transformPlug()->hash( h );
 		inTransformPlug()->hash( h );
+		concatenatePlug()->hash( h );
 	}
 	else if( output == outTransformPlug() )
 	{
-		inTransformPlug()->hash( h );
 		if( enabledPlug()->getValue() )
 		{
-			transformPlug()->hash( h );
+			if( concatenatePlug()->getValue() )
+			{
+				inTransformPlug()->hash( h );
+				transformPlug()->hash( h );
+			}
+		}
+		else
+		{
+			inTransformPlug()->hash( h );
 		}
 	}
 }
@@ -340,10 +370,18 @@ void ImageTransform::compute( ValuePlug *output, const Context *context ) const
 	}
 	else if( output == outTransformPlug() )
 	{
-		M33f result = inTransformPlug()->getValue();
+		M33f result;
 		if( enabledPlug()->getValue() )
 		{
-			result *= transformPlug()->matrix();
+			if( concatenatePlug()->getValue() )
+			{
+				result = inTransformPlug()->getValue() * transformPlug()->matrix();
+			}
+		}
+		else
+		{
+			// When we're disabled, we can't break concatenation.
+			result = inTransformPlug()->getValue();
 		}
 		static_cast<M33fPlug *>( output )->setValue( result );
 		return;
@@ -481,7 +519,11 @@ IECore::ConstFloatVectorDataPtr ImageTransform::computeChannelData( const std::s
 
 unsigned ImageTransform::operation( Imath::M33f &matrix, Imath::M33f &resampleMatrix ) const
 {
-	matrix = inTransformPlug()->getValue() * transformPlug()->matrix();
+	matrix = transformPlug()->matrix();
+	if( concatenatePlug()->getValue() )
+	{
+		matrix = inTransformPlug()->getValue() * matrix;
+	}
 
 	V2f scale, translate;
 	float shear = 0, rotate = 0;

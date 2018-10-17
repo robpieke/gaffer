@@ -425,5 +425,30 @@ class ImageTransformTest( GafferImageTest.ImageTestCase ) :
 			# checker tiles, so does guarantee that tiles aren't getting out of alignment.
 			self.assertImagesEqual( tc2["out"], t2["out"], maxDifference = 0.11, ignoreDataWindow = True )
 
+	def testDisabledAndNonConcatenating( self ) :
+
+		checker = GafferImage.Checkerboard()
+		checker["format"].setValue( GafferImage.Format( 200, 200 ) )
+
+		t1 = GafferImage.ImageTransform()
+		t1["in"].setInput( checker["out"] )
+		t1["transform"]["translate"]["x"].setValue( 10 )
+
+		t2 = GafferImage.ImageTransform()
+		t2["in"].setInput( t1["out"] )
+		t2["transform"]["translate"]["x"].setValue( 10 )
+
+		t3 = GafferImage.ImageTransform()
+		t3["in"].setInput( t2["out"] )
+		t3["transform"]["translate"]["x"].setValue( 10 )
+
+		self.assertEqual( t3["out"]["dataWindow"].getValue().min().x, 30 )
+
+		t2["concatenate"].setValue( False )
+		self.assertEqual( t3["out"]["dataWindow"].getValue().min().x, 30 )
+
+		t2["enabled"].setValue( False )
+		self.assertEqual( t3["out"]["dataWindow"].getValue().min().x, 20 )
+
 if __name__ == "__main__":
 	unittest.main()

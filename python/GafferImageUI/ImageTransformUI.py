@@ -87,6 +87,24 @@ Gaffer.Metadata.registerNode(
 
 		) ),
 
+		"concatenate" : [
+
+			"description",
+
+			"""
+			Combines the processing for a series of ImageTransforms so that
+			transformation and filtering is only applied once. This gives better
+			image quality and performance.
+
+			> Note : When concatenation is in effect, the filter settings on upstream
+			> ImageTransforms are ignored.
+			""",
+
+			"layout:section", "Node",
+			"layout:index", -1,
+
+		],
+
 	}
 
 )
