@@ -145,47 +145,47 @@ class SceneInspector( GafferUI.NodeSetEditor ) :
 
 			return self.__sets[setName]
 
-	## A list of Section instances may be passed to create a custom inspector,
-	# otherwise all registered Sections will be used.
-	def __init__( self, scriptNode, sections = None, **kw ) :
-
-		mainColumn = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, borderWidth = 8 )
-
-		GafferUI.NodeSetEditor.__init__( self, mainColumn, scriptNode, **kw )
-
-		self.__sections = []
-
-		if sections is not None :
-
-			for section in sections :
-				mainColumn.append( section )
-				self.__sections.append( section )
-
-			mainColumn.append( GafferUI.Spacer( imath.V2i( 0 ) ), expand = True )
-
-		else :
-
-			columns = {}
-			with mainColumn :
-				columns[None] = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, spacing = 8, borderWidth = 5 )
-				tabbedContainer = GafferUI.TabbedContainer()
-
-			for registration in self.__sectionRegistrations :
-				section = registration.section()
-				column = columns.get( registration.tab )
-				if column is None :
-					with tabbedContainer :
-						with GafferUI.ScrolledContainer( horizontalMode = GafferUI.ScrollMode.Never, parenting = { "label" : registration.tab } ) :
-							column = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, borderWidth = 4, spacing = 8 )
-							columns[registration.tab] = column
-				column.append( section )
-				self.__sections.append( section )
-
-			for tab, column in columns.items() :
-				if tab is not None :
-					column.append( GafferUI.Spacer( imath.V2i( 0 ) ), expand = True )
+	def __init__( self, scriptNode, topLevelWidget = None, **kw ) :
 
 		self.__targetPaths = None
+
+		if topLevelWidget is not None :
+			# Derived class will build UI itself
+			GafferUI.NodeSetEditor.__init__( self, topLevelWidget, scriptNode, **kw )
+			return
+
+		# Build UI from all registered sections
+
+		mainColumn = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, borderWidth = 8 )
+		GafferUI.NodeSetEditor.__init__( self, mainColumn, scriptNode, **kw )
+
+		columns = {}
+		with mainColumn :
+			columns[""] = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, spacing = 8, borderWidth = 5 )
+			tabbedContainer = GafferUI.TabbedContainer()
+
+		for registration in self.__sectionRegistrations :
+			section = registration.section()
+			tab, unused, collapsible = registration.layoutLocation.partition( "." )
+
+			column = columns.get( tab )
+			if column is None :
+				with tabbedContainer :
+					with GafferUI.ScrolledContainer( horizontalMode = GafferUI.ScrollMode.Never, parenting = { "label" : tab } ) :
+						column = GafferUI.ListContainer( GafferUI.ListContainer.Orientation.Vertical, borderWidth = 4, spacing = 8 )
+						columns[tab] = column
+
+			if collapsible :
+				collapsible = GafferUI.Collapsible( label = collapsible, collapsed = True )
+				collapsible.setChild( section )
+				column.append( collapsible )
+			else :
+				column.append( section )
+
+		for tab, column in columns.items() :
+			if tab is not None :
+				column.append( GafferUI.Spacer( imath.V2i( 0 ) ), expand = True )
+
 		self._updateFromSet()
 
 	## May be used to "pin" target paths into the editor, rather than
@@ -207,11 +207,11 @@ class SceneInspector( GafferUI.NodeSetEditor ) :
 		return self.__targetPaths
 
 	@classmethod
-	def registerSection( cls, section, tab ) :
+	def registerSection( cls, section, layoutLocation ) :
 
-		cls.__sectionRegistrations.append( cls.__SectionRegistration( section = section, tab = tab ) )
+		cls.__sectionRegistrations.append( cls.__SectionRegistration( section = section, layoutLocation = layoutLocation ) )
 
-	__SectionRegistration = collections.namedtuple( "SectionRegistration", [ "section", "tab" ] )
+	__SectionRegistration = collections.namedtuple( "SectionRegistration", [ "section", "layoutLocation" ] )
 	__sectionRegistrations = []
 
 	def __repr__( self ) :
@@ -300,11 +300,23 @@ class SceneInspector( GafferUI.NodeSetEditor ) :
 				if window is not None :
 					window.parent().removeChild( window )
 
-			for section in self.__sections :
+			for section in self.__sections( self ) :
 				section.update( targets )
 				section.setEnabled( section.getEnabled() and bool( targets ) )
 
 			return False # remove idle callback
+
+	@classmethod
+	def __sections( cls, widget ) :
+
+		result = []
+		if isinstance( widget, Section ) :
+			result.append( widget )
+		else :
+			for c in widget.children() :
+				result.extend( cls.__sections( c ) )
+
+		return result
 
 GafferUI.Editor.registerType( "SceneInspector", SceneInspector )
 
@@ -1360,7 +1372,6 @@ class _InheritanceSection( Section ) :
 		script = self.__target.scene.ancestor( Gaffer.ScriptNode )
 		GafferSceneUI.ContextAlgo.setSelectedPaths( script.context(), IECore.PathMatcher( [ label.getText() ] ) )
 
-
 ##########################################################################
 # Shader section
 ##########################################################################
@@ -1621,7 +1632,7 @@ class __NodeSection( Section ) :
 				widget.setGraphComponent( None )
 				widget.setEnabled( False )
 
-SceneInspector.registerSection( __NodeSection, tab = None )
+SceneInspector.registerSection( __NodeSection, "" )
 
 ##########################################################################
 # Path section
@@ -1668,7 +1679,7 @@ class __PathSection( LocationSection ) :
 				len( labels ) > i and labels[i].startswith( "/" )
 			)
 
-SceneInspector.registerSection( __PathSection, tab = "Selection" )
+SceneInspector.registerSection( __PathSection, "Selection" )
 
 ##########################################################################
 # Transform section
@@ -1678,7 +1689,7 @@ class __TransformSection( LocationSection ) :
 
 	def __init__( self ) :
 
-		LocationSection.__init__( self, collapsed = True, label = "Transform" )
+		LocationSection.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
 			index = 0
@@ -1758,7 +1769,7 @@ class __TransformSection( LocationSection ) :
 			else :
 				return components[self.__component]
 
-SceneInspector.registerSection( __TransformSection, tab = "Selection" )
+SceneInspector.registerSection( __TransformSection, "Selection.Transform" )
 
 ##########################################################################
 # Bound section
@@ -1768,7 +1779,7 @@ class __BoundSection( LocationSection ) :
 
 	def __init__( self ) :
 
-		LocationSection.__init__( self, collapsed = True, label = "Bounding box" )
+		LocationSection.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
 			self.__localBoundRow = DiffRow( self.__Inspector() )
@@ -1802,7 +1813,7 @@ class __BoundSection( LocationSection ) :
 
 			return bound
 
-SceneInspector.registerSection( __BoundSection, tab = "Selection" )
+SceneInspector.registerSection( __BoundSection, "Selection.Bounding Box" )
 
 ##########################################################################
 # Attributes section
@@ -1812,7 +1823,7 @@ class __AttributesSection( LocationSection ) :
 
 	def __init__( self ) :
 
-		LocationSection.__init__( self, collapsed = True, label = "Attributes" )
+		LocationSection.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
 			self.__diffColumn = DiffColumn( self.__Inspector(), filterable=True )
@@ -1854,7 +1865,7 @@ class __AttributesSection( LocationSection ) :
 			attributeNames = target.fullAttributes().keys() if target.path else []
 			return [ self.__class__( attributeName ) for attributeName in attributeNames ]
 
-SceneInspector.registerSection( __AttributesSection, tab = "Selection" )
+SceneInspector.registerSection( __AttributesSection, "Selection.Attributes" )
 
 ##########################################################################
 # Object section
@@ -1890,7 +1901,7 @@ class __ObjectSection( LocationSection ) :
 
 	def __init__( self ) :
 
-		LocationSection.__init__( self, collapsed = True, label = "Object" )
+		LocationSection.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
 
@@ -1921,6 +1932,7 @@ class __ObjectSection( LocationSection ) :
 		for diffColumn in self._mainColumn() :
 			diffColumn.update( targets )
 
+	## REMOVE ME?????
 	def _summary( self, targets ) :
 
 		if not len( targets ) :
@@ -2103,7 +2115,7 @@ class __ObjectSection( LocationSection ) :
 
 			return [ self.__class__( k ) for k in object.keys() ]
 
-SceneInspector.registerSection( __ObjectSection, tab = "Selection" )
+SceneInspector.registerSection( __ObjectSection, "Selection.Object" )
 
 ##########################################################################
 # Set Membership section
@@ -2122,7 +2134,7 @@ class __SetMembershipSection( LocationSection ) :
 
 	def __init__( self ) :
 
-		LocationSection.__init__( self, collapsed = True, label = "Set Membership" )
+		LocationSection.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
 			self.__diffColumn = DiffColumn( self.__Inspector(), _SetMembershipDiff, filterable = True )
@@ -2178,7 +2190,7 @@ class __SetMembershipSection( LocationSection ) :
 
 			return True
 
-SceneInspector.registerSection( __SetMembershipSection, tab = "Selection" )
+SceneInspector.registerSection( __SetMembershipSection, "Selection.Set Membership" )
 
 ##########################################################################
 # Global Options and Attributes section
@@ -2188,7 +2200,7 @@ class __GlobalsSection( Section ) :
 
 	def __init__( self, prefix, label ) :
 
-		Section.__init__( self, collapsed = True, label = label )
+		Section.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
 			self.__diffColumn = DiffColumn( self.__Inspector( prefix ), filterable=True )
@@ -2222,8 +2234,8 @@ class __GlobalsSection( Section ) :
 
 			return [ self.__class__( self.__prefix, key ) for key in keys ]
 
-SceneInspector.registerSection( lambda : __GlobalsSection( "option:", "Options" ), tab = "Globals" )
-SceneInspector.registerSection( lambda : __GlobalsSection( "attribute:", "Attributes" ), tab = "Globals" )
+SceneInspector.registerSection( lambda : __GlobalsSection( "option:", "Options" ), "Globals.Options" )
+SceneInspector.registerSection( lambda : __GlobalsSection( "attribute:", "Attributes" ), "Globals.Attributes" )
 
 ##########################################################################
 # Outputs section
@@ -2299,7 +2311,7 @@ class __OutputsSection( Section ) :
 
 	def __init__( self ) :
 
-		Section.__init__( self, collapsed = True, label = "Outputs" )
+		Section.__init__( self, collapsed = None )
 
 		self.__rows = {} # mapping from output name to row
 
@@ -2327,7 +2339,7 @@ class __OutputsSection( Section ) :
 
 		self._mainColumn()[:] = rows
 
-SceneInspector.registerSection( __OutputsSection, tab = "Globals" )
+SceneInspector.registerSection( __OutputsSection, "Globals.Outputs" )
 
 ##########################################################################
 # Sets section
@@ -2434,7 +2446,7 @@ class _SetsSection( Section ) :
 
 	def __init__( self ) :
 
-		Section.__init__( self, collapsed = True, label = "Sets" )
+		Section.__init__( self, collapsed = None )
 
 		with self._mainColumn() :
 			self.__diffColumn = DiffColumn( self.__Inspector(), _SetDiff, filterable = True )
@@ -2473,4 +2485,77 @@ class _SetsSection( Section ) :
 
 SceneInspector.SetsSection = _SetsSection
 
-SceneInspector.registerSection( _SetsSection, tab = "Globals" )
+SceneInspector.registerSection( _SetsSection, "Globals.Sets" )
+
+##########################################################################
+# Viewer integration
+##########################################################################
+
+class _LocationInspector( SceneInspector  ) :
+
+	def __init__( scriptNode, toInspect ) :
+
+		pass
+
+def __inspect( menu, what ) :
+
+	pass
+
+def __compare( menu, what ) :
+
+	pass
+
+def __viewContextMenu( viewer, view, menuDefinition ) :
+
+	if not isinstance( view, GafferSceneUI.SceneView ) :
+		return False
+
+	selection = view.viewportGadget().getPrimaryChild().getSelection()
+	inspectActive = not selection.isEmpty()
+	compareActive = inspectActive and len( selection.paths() ) == 2
+
+	for label in [
+		"All",
+		"Bound",
+		"Transform",
+		"Object",
+		"Attributes",
+	] :
+		menuDefinition.append( "/Inspect/" + label, { "active" : inspectActive } )
+		menuDefinition.append( "/Compare/" + label, { "active" : compareActive } )
+
+	# All
+	# ---
+	# Bound
+	# Transform
+	# Object
+	# Attributes
+	# Shader
+	# 	/Arnold Light
+	# 	/Arnold Surface
+	# 	/Arnold Displacement
+	# Set Membership
+
+
+	# sections = (
+	# 	( "
+
+
+	# )
+
+
+	# menuDefinition.append(
+	# 	"/Inspect/All", {}
+	# )
+	# menuDefinition.append(
+	# 	"/Inspect/Divider", { "divider" : True }
+	# )
+
+	# menuDefinition.append(
+	# 	"/Compare/All", {},
+	# 	"/Compare/Divider", { "divider" : True }
+	# )
+	#__appendClippingPlaneMenuItems( menuDefinition, "/Clipping Planes", view, viewer )
+
+GafferUI.Viewer.viewContextMenuSignal().connect( __viewContextMenu, scoped = False )
+
