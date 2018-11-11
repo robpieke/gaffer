@@ -447,5 +447,16 @@ class WidgetTest( GafferUITest.TestCase ) :
 		w.setVisible( 1 )
 		self.assertTrue( w.getVisible() is True )
 
+	def testChildren( self ) :
+
+		with GafferUI.Window() as w :
+			with GafferUI.ListContainer() as l :
+				w1 = GafferUI.Button()
+				w2 = GafferUI.TextWidget()
+
+		self.assertEqual( w.children(), [ l ] )
+		self.assertEqual( l.children(), [ w1, w2 ] )
+		self.assertEqual( l.children( GafferUI.TextWidget ), [ w2 ] )
+
 if __name__ == "__main__":
 	unittest.main()

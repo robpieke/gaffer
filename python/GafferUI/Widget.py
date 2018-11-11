@@ -364,6 +364,23 @@ class Widget( object ) :
 
 		return False
 
+	def children( self, type = None ) :
+
+		result = []
+		self.__childrenWalk( self._qtWidget(), type or GafferUI.Widget, result )
+		return result
+
+	def __childrenWalk( self, qtWidget, type, result ) :
+
+		for childQtWidget in qtWidget.children() :
+			ownerWeakref = self.__qtWidgetOwners.get( childQtWidget )
+			if ownerWeakref is not None :
+				owner = ownerWeakref()
+				if isinstance( owner, type ) :
+					result.append( owner  )
+			else :
+				self.__childrenWalk( childQtWidget, type, result )
+
 	## \deprecated Use bound().size() instead.
 	def size( self ) :
 
