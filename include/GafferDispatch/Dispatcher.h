@@ -172,9 +172,8 @@ class GAFFERDISPATCH_API Dispatcher : public Gaffer::Node
 		/// files on a per-job basis.
 		Gaffer::StringPlug *jobsDirectoryPlug();
 		const Gaffer::StringPlug *jobsDirectoryPlug() const;
-		/// At the start of dispatch(), a directory is created under jobsDirectoryPlug + jobNamePlug
-		/// which the dispatcher writes temporary files to. This method returns the most recent created directory.
-		const std::string jobDirectory() const;
+		/// \deprecated Use `context->get( "dispatcher:jobDirectory" )` instead.
+		static std::string jobDirectory();
 		//@}
 
 		/// A function which creates a Dispatcher.
@@ -279,7 +278,6 @@ class GAFFERDISPATCH_API Dispatcher : public Gaffer::Node
 	private :
 
 		std::string createJobDirectory( const Gaffer::Context *context ) const;
-		mutable std::string m_jobDirectory;
 
 		void executeAndPruneImmediateBatches( TaskBatch *batch, bool immediate = false ) const;
 

@@ -355,7 +355,7 @@ void GafferDispatchModule::bindDispatcher()
 {
 	scope s = NodeClass<Dispatcher, DispatcherWrapper>()
 		.def( "dispatch", &dispatch )
-		.def( "jobDirectory", &Dispatcher::jobDirectory )
+		.def( "jobDirectory", &Dispatcher::jobDirectory ).staticmethod( "jobDirectory" )
 		.def( "frameRange", &frameRange )
 		.def( "create", &Dispatcher::create ).staticmethod( "create" )
 		.def( "createMatching", &createMatching, ( arg( "matchPattern" ) ) ).staticmethod( "createMatching" )

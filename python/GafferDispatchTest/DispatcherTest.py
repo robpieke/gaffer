@@ -103,7 +103,7 @@ class DispatcherTest( GafferTest.TestCase ) :
 
 		GafferDispatch.Dispatcher.registerDispatcher( "testDispatcher", functools.partial( create, self.temporaryDirectory() ) )
 
-	def testBadJobDirectory( self ) :
+	def testJobDirectory( self ) :
 
 		dispatcher = GafferDispatch.Dispatcher.create( "testDispatcher" )
 		self.assertEqual( dispatcher["jobName"].getValue(), "" )
@@ -113,7 +113,7 @@ class DispatcherTest( GafferTest.TestCase ) :
 		s["n1"] = GafferDispatchTest.LoggingTaskNode()
 		dispatcher.dispatch( [ s["n1"] ] )
 
-		jobDir = dispatcher.jobDirectory()
+		jobDir = s["n1"].log[0].context["dispatcher:jobDirectory"]
 		self.assertEqual( jobDir, self.temporaryDirectory() + "/000000" )
 		self.assertTrue( os.path.exists( jobDir ) )
 
@@ -135,7 +135,6 @@ class DispatcherTest( GafferTest.TestCase ) :
 		n = GafferDispatchTest.LoggingTaskNode()
 
 		self.assertRaises( RuntimeError, dispatcher.dispatch, [ n ] )
-		self.assertEqual( dispatcher.jobDirectory(), "" )
 		self.assertEqual( n.log, [] )
 
 	def testDifferentScripts( self ) :
@@ -149,7 +148,6 @@ class DispatcherTest( GafferTest.TestCase ) :
 		s2["n2"] = GafferDispatchTest.LoggingTaskNode()
 
 		self.assertRaises( RuntimeError, dispatcher.dispatch, [ s["n1"], s2["n2"] ] )
-		self.assertEqual( dispatcher.jobDirectory(), "" )
 		self.assertEqual( s["n1"].log, [] )
 		self.assertEqual( s2["n2"].log, [] )
 
@@ -161,7 +159,6 @@ class DispatcherTest( GafferTest.TestCase ) :
 		s["n1"] = Gaffer.Node()
 
 		self.assertRaises( RuntimeError, dispatcher.dispatch, [ s["n1"] ] )
-		self.assertEqual( dispatcher.jobDirectory(), "" )
 
 	def testDispatcherRegistration( self ) :
 
@@ -1013,7 +1010,7 @@ class DispatcherTest( GafferTest.TestCase ) :
 		dispatcher.dispatch( [ s["w"] ] )
 
 		# a single dispatch should have the same job directory for all batches
-		jobDir = dispatcher.jobDirectory()
+		jobDir = dispatcher["jobsDirectory"].getValue() + "/000000"
 		self.assertEqual( next( open( "%s/test.0002.txt" % jobDir ) ), "w on 2 from %s" % jobDir )
 		self.assertEqual( next( open( "%s/test.0004.txt" % jobDir ) ), "w on 4 from %s" % jobDir )
 		self.assertEqual( next( open( "%s/test.0006.txt" % jobDir ) ), "w on 6 from %s" % jobDir )

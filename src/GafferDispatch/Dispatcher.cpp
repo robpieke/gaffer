@@ -47,6 +47,7 @@
 #include "boost/algorithm/string/predicate.hpp"
 #include "boost/filesystem.hpp"
 
+using namespace std;
 using namespace IECore;
 using namespace Gaffer;
 using namespace GafferDispatch;
@@ -125,9 +126,15 @@ const StringPlug *Dispatcher::jobsDirectoryPlug() const
 	return getChild<StringPlug>( g_firstPlugIndex + 3 );
 }
 
-const std::string Dispatcher::jobDirectory() const
+std::string Dispatcher::jobDirectory()
 {
-	return m_jobDirectory;
+	const Context *context = Context::current();
+	string result = context->get<string>( g_jobDirectoryContextEntry, "" );
+	if( result.empty() )
+	{
+		throw IECore::Exception( "Dispatcher::jobDirectory() can only be called during dispatch" );
+	}
+	return result;
 }
 
 std::string Dispatcher::createJobDirectory( const Context *context ) const
@@ -619,10 +626,6 @@ class DispatcherSignalGuard
 
 void Dispatcher::dispatch( const std::vector<NodePtr> &nodes ) const
 {
-	// clear job directory, so that if our node validation fails,
-	// jobDirectory() won't return the result from the previous dispatch.
-	m_jobDirectory = "";
-
 	// validate the nodes we've been given
 
 	if ( nodes.empty() )
@@ -664,8 +667,8 @@ void Dispatcher::dispatch( const std::vector<NodePtr> &nodes ) const
 	Context::EditableScope jobScope( Context::current() );
 	// create the job directory now, so it's available in preDispatchSignal().
 	/// \todo: move directory creation between preDispatchSignal() and dispatchSignal()
-	m_jobDirectory = createJobDirectory( Context::current() );
-	jobScope.set( g_jobDirectoryContextEntry, m_jobDirectory );
+	const string jobDirectory = createJobDirectory( Context::current() );
+	jobScope.set( g_jobDirectoryContextEntry, jobDirectory );
 
 	// this object calls this->preDispatchSignal() in its constructor and this->postDispatchSignal()
 	// in its destructor, thereby guaranteeing that we always call this->postDispatchSignal().
