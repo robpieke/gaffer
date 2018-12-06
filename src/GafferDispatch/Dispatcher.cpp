@@ -137,7 +137,7 @@ std::string Dispatcher::jobDirectory()
 	return result;
 }
 
-std::string Dispatcher::createJobDirectory( const Context *context ) const
+void Dispatcher::createJobDirectory( const Gaffer::ScriptNode *script, Gaffer::Context::EditableScope &jobContext ) const
 {
 	boost::filesystem::path jobDirectory( context->substitute( jobsDirectoryPlug()->getValue() ) );
 	jobDirectory /= context->substitute( jobNamePlug()->getValue() );
@@ -173,9 +173,12 @@ std::string Dispatcher::createJobDirectory( const Context *context ) const
 		numberedJobDirectory = jobDirectory / ( formatter % i ).str();
 		if( boost::filesystem::create_directory( numberedJobDirectory ) )
 		{
-			return numberedJobDirectory.string();
+			break;
 		}
 	}
+
+	jobScope.set( g_jobDirectoryContextEntry, jobDirectory );
+
 }
 
 /*
@@ -667,8 +670,11 @@ void Dispatcher::dispatch( const std::vector<NodePtr> &nodes ) const
 	Context::EditableScope jobScope( Context::current() );
 	// create the job directory now, so it's available in preDispatchSignal().
 	/// \todo: move directory creation between preDispatchSignal() and dispatchSignal()
-	const string jobDirectory = createJobDirectory( Context::current() );
-	jobScope.set( g_jobDirectoryContextEntry, jobDirectory );
+
+	const string jobDirectory = createJobDirectory( jobScope );
+
+
+	self.__scriptFile = os.path.join( self.__directory, os.path.basename( scriptFileName ) if scriptFileName else "untitled.gfr" )
 
 	// this object calls this->preDispatchSignal() in its constructor and this->postDispatchSignal()
 	// in its destructor, thereby guaranteeing that we always call this->postDispatchSignal().
