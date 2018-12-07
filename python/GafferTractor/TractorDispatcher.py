@@ -78,8 +78,6 @@ class TractorDispatcher( GafferDispatch.Dispatcher ) :
 		dispatchData["scriptFile"] = os.path.join( self.jobDirectory(), os.path.basename( dispatchData["scriptNode"]["fileName"].getValue() ) or "untitled.gfr" )
 		dispatchData["batchesToTasks"] = {}
 
-		dispatchData["scriptNode"].serialiseToFile( dispatchData["scriptFile"] )
-
 		# Create a Tractor job and set its basic properties.
 
 		context = Gaffer.Context.current()
