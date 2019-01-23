@@ -125,6 +125,8 @@ class IECORESCENE_API Renderer : public IECore::RefCounted
 
 		};
 
+		using ObjectInterfaceSet = std::unordered_set<ObjectInterfacePtr>;
+
 		/// Creates a block of attributes which can subsequently
 		/// be assigned to objects. Each block of attributes may
 		/// be assigned to multiple objects, but each object may
@@ -143,7 +145,11 @@ class IECORESCENE_API Renderer : public IECore::RefCounted
 		/// ----------------------------
 		///
 		/// "<rendererSpecificPrefix>:name"
-		virtual AttributesInterfacePtr attributes( const IECore::CompoundObject *attributes ) = 0;
+		virtual AttributesInterfacePtr attributes(
+			const IECore::CompoundObject *attributes,
+			const ObjectInterfaceSet *linkedLights = nullptr
+			const ObjectInterfaceSet *linkedBlockers = nullptr
+		) = 0;
 
 		IE_CORE_FORWARDDECLARE( ObjectInterface );
 
