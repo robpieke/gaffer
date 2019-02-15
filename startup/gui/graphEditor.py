@@ -78,6 +78,22 @@ Gaffer.Metadata.registerValue( Gaffer.FloatPlug, "nodule:color", imath.Color3f( 
 Gaffer.Metadata.registerValue( Gaffer.Color3fPlug, "nodule:color", imath.Color3f( 0.69, 0.5378, 0.2283 ) )
 Gaffer.Metadata.registerValue( Gaffer.V3fPlug, "nodule:color", imath.Color3f( 0.47, 0.181, 0.181 ) )
 
+# 823631ff
+# 449645ff
+# 4a5ebdff
+f = 0.5
+c = imath.Color3f( 0.2467, 0.3762, 0.47 )
+
+def lerp( a, b, x ) :
+
+	return ( a * ( 1 - x ) ) + b * x
+
+Gaffer.Metadata.registerValue( Gaffer.Color3fPlug, "r", "nodule:color", lerp( imath.Color3f( 0.51, 0.212, 0.192 ), c, f ) )
+Gaffer.Metadata.registerValue( Gaffer.Color3fPlug, "g", "nodule:color", lerp( imath.Color3f( 0.267, 0.588, 0.271 ), c, f ) )
+Gaffer.Metadata.registerValue( Gaffer.Color3fPlug, "binary", "nodule:color", lerp( imath.Color3f( 0.29, 0.369, 0.741 ), c, f ) )
+
+#Gaffer.Metadata.registerValue( Gaffer.V3fPlug, "nodule:color", imath.Color3f( 0.47, 0.181, 0.181 ) )
+
 ##########################################################################
 # Behaviour
 ##########################################################################
