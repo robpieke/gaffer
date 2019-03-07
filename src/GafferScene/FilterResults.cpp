@@ -151,3 +151,12 @@ void FilterResults::compute( Gaffer::ValuePlug *output, const Gaffer::Context *c
 
 	ComputeNode::compute( output, context );
 }
+
+ComputeNode::CachePolicy FilterResults::hashCachePolicy( const Gaffer::ValuePlug *output ) const
+{
+	if( output == outPlug() )
+	{
+		return CachePolicy::TaskParallel;
+	}
+	return ComputeNode::hashCachePolicy( output );
+}
