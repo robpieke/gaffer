@@ -77,3 +77,17 @@ void ComputeNode::hash( const ValuePlug *output, const Context *context, IECore:
 void ComputeNode::compute( ValuePlug *output, const Context *context ) const
 {
 }
+
+ComputeNode::CachePolicy ComputeNode::hashCachePolicy( const ValuePlug *output ) const
+{
+	return CachePolicy::Unspecified;
+}
+
+ComputeNode::CachePolicy ComputeNode::computeCachePolicy( const ValuePlug *output ) const
+{
+	if( !output->getFlags( Plug::Cacheable ) )
+	{
+		return CachePolicy::Uncached;
+	}
+	return CachePolicy::Unspecified;
+}

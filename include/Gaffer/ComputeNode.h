@@ -78,6 +78,33 @@ class GAFFER_API ComputeNode : public DependencyNode
 		/// an appropriate value and apply it using output->setValue().
 		virtual void compute( ValuePlug *output, const Context *context ) const = 0;
 
+		enum class CachePolicy
+		{
+			// No caching is performed.
+			Uncached,
+			// Per-thread serial cache. Only applicable for `hashCachePolicy()`.
+			Serial,
+			// Global thread-safe cache. If multiple threads
+			// need the result of the same computation, one thread
+			// does the work while the others block.
+			Parallel,
+			// Global thread-safe cache. If multiple threads
+			// need the result of the same computation, one thread
+			// initiates the work and the others steal TBB tasks until
+			// it is done. This policy _must_ be used for any process
+			// that spawns TBB tasks.
+			TaskParallel,
+			// Legacy policy, to be removed. We need to keep this until
+			// all processes that spawn TBB threads have declared themselves
+			// as TaskParallel appropriately.
+			Unspecified
+		};
+
+		/// Called to determine how the results of `hash()` will be cached.
+		virtual CachePolicy hashCachePolicy( const ValuePlug *output ) const;
+		// Called to determine how the results of `compute()` will be cached.
+		virtual CachePolicy computeCachePolicy( const ValuePlug *output ) const;
+
 	private :
 
 		friend class ValuePlug;
