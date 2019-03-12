@@ -137,6 +137,7 @@ from ParallelAlgoTest import ParallelAlgoTest
 from BackgroundTaskTest import BackgroundTaskTest
 from ProcessMessageHandlerTest import ProcessMessageHandlerTest
 from MonitorAlgoTest import MonitorAlgoTest
+from TaskMutexTest import TaskMutexTest
 
 if __name__ == "__main__":
 	import unittest
