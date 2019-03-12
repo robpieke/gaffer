@@ -1,7 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 //
-//  Copyright (c) 2012, John Haddon. All rights reserved.
-//  Copyright (c) 2013-2015, Image Engine Design Inc. All rights reserved.
+//  Copyright (c) 2019, Image Engine Design Inc. All rights reserved.
 //
 //  Redistribution and use in source and binary forms, with or without
 //  modification, are permitted provided that the following conditions are
@@ -35,48 +34,16 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include "GafferBindings/DependencyNodeBinding.h"
+#ifndef GAFFERTESTMODULE_TASKPARALLELPOLICYTEST_H
+#define GAFFERTESTMODULE_TASKPARALLELPOLICYTEST_H
 
-#include "GafferTest/ComputeNodeTest.h"
-#include "GafferTest/ContextTest.h"
-#include "GafferTest/DownstreamIteratorTest.h"
-#include "GafferTest/FilteredRecursiveChildIteratorTest.h"
-#include "GafferTest/MetadataTest.h"
-#include "GafferTest/MultiplyNode.h"
-#include "GafferTest/RecursiveChildIteratorTest.h"
+#include "GafferTest/Export.h"
 
-#include "TaskMutexTest.h"
-#include "TaskParallelPolicyTest.h"
-
-#include "IECorePython/ScopedGILRelease.h"
-
-using namespace boost::python;
-using namespace GafferTest;
-using namespace GafferTestModule;
-
-static void testMetadataThreadingWrapper()
-{
-	IECorePython::ScopedGILRelease gilRelease;
-	testMetadataThreading();
-}
-
-BOOST_PYTHON_MODULE( _GafferTest )
+namespace GafferTestModule
 {
 
-	GafferBindings::DependencyNodeClass<MultiplyNode>();
+void testTaskParallelPolicyClearFromGet();
 
-	def( "testRecursiveChildIterator", &testRecursiveChildIterator );
-	def( "testFilteredRecursiveChildIterator", &testFilteredRecursiveChildIterator );
-	def( "testMetadataThreading", &testMetadataThreadingWrapper );
-	def( "testManyContexts", &testManyContexts );
-	def( "testManySubstitutions", &testManySubstitutions );
-	def( "testManyEnvironmentSubstitutions", &testManyEnvironmentSubstitutions );
-	def( "testScopingNullContext", &testScopingNullContext );
-	def( "testEditableScope", &testEditableScope );
-	def( "testComputeNodeThreading", &testComputeNodeThreading );
-	def( "testDownstreamIterator", &testDownstreamIterator );
+} // namespace GafferTestModule
 
-	def( "testTaskMutex", &testTaskMutex );
-	def( "testTaskParallelPolicyClearFromGet", &testTaskParallelPolicyClearFromGet );
-
-}
+#endif // GAFFERTESTMODULE_TASKPARALLELPOLICYTEST_H

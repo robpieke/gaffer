@@ -1,7 +1,6 @@
 //////////////////////////////////////////////////////////////////////////
 //
-//  Copyright (c) 2012, John Haddon. All rights reserved.
-//  Copyright (c) 2013-2015, Image Engine Design Inc. All rights reserved.
+//  Copyright (c) 2019, Image Engine Design Inc. All rights reserved.
 //
 //  Redistribution and use in source and binary forms, with or without
 //  modification, are permitted provided that the following conditions are
@@ -35,48 +34,33 @@
 //
 //////////////////////////////////////////////////////////////////////////
 
-#include "GafferBindings/DependencyNodeBinding.h"
-
-#include "GafferTest/ComputeNodeTest.h"
-#include "GafferTest/ContextTest.h"
-#include "GafferTest/DownstreamIteratorTest.h"
-#include "GafferTest/FilteredRecursiveChildIteratorTest.h"
-#include "GafferTest/MetadataTest.h"
-#include "GafferTest/MultiplyNode.h"
-#include "GafferTest/RecursiveChildIteratorTest.h"
-
-#include "TaskMutexTest.h"
 #include "TaskParallelPolicyTest.h"
 
-#include "IECorePython/ScopedGILRelease.h"
+#include "GafferTest/Assert.h"
 
-using namespace boost::python;
-using namespace GafferTest;
-using namespace GafferTestModule;
+#include "Gaffer/Private/IECorePreview/TaskParallelPolicy.h"
 
-static void testMetadataThreadingWrapper()
+using namespace IECorePreview;
+
+void GafferTestModule::testTaskParallelPolicyClearFromGet()
 {
-	IECorePython::ScopedGILRelease gilRelease;
-	testMetadataThreading();
-}
+	typedef IECore::LRUCache<int, int, IECorePreview::LRUCachePolicy::TaskParallel> Cache;
+	typedef std::unique_ptr<Cache> CachePtr;
 
-BOOST_PYTHON_MODULE( _GafferTest )
-{
+	CachePtr cache;
+	cache.reset(
+		new Cache(
+			// Calling `clear()` from inside a getter is basically insane. But it can happen
+			// in Gaffer, because `get()` might trigger arbitrary python, arbitrary python
+			// might trigger garbage collection, garbage collection might destroy a plug,
+			// and destroying a plug clears the cache.
+			[&cache]( int key, size_t &cost ) { cache->clear(); cost = 1; return key; },
+			100
+		)
+	);
 
-	GafferBindings::DependencyNodeClass<MultiplyNode>();
-
-	def( "testRecursiveChildIterator", &testRecursiveChildIterator );
-	def( "testFilteredRecursiveChildIterator", &testFilteredRecursiveChildIterator );
-	def( "testMetadataThreading", &testMetadataThreadingWrapper );
-	def( "testManyContexts", &testManyContexts );
-	def( "testManySubstitutions", &testManySubstitutions );
-	def( "testManyEnvironmentSubstitutions", &testManyEnvironmentSubstitutions );
-	def( "testScopingNullContext", &testScopingNullContext );
-	def( "testEditableScope", &testEditableScope );
-	def( "testComputeNodeThreading", &testComputeNodeThreading );
-	def( "testDownstreamIterator", &testDownstreamIterator );
-
-	def( "testTaskMutex", &testTaskMutex );
-	def( "testTaskParallelPolicyClearFromGet", &testTaskParallelPolicyClearFromGet );
-
+	for( int i = 0; i < 100000; ++i )
+	{
+		GAFFERTEST_ASSERTEQUAL( cache->get( i ), i );
+	}
 }

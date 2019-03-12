@@ -138,6 +138,7 @@ from BackgroundTaskTest import BackgroundTaskTest
 from ProcessMessageHandlerTest import ProcessMessageHandlerTest
 from MonitorAlgoTest import MonitorAlgoTest
 from TaskMutexTest import TaskMutexTest
+from TaskParallelPolicyTest import TaskParallelPolicyTest
 
 if __name__ == "__main__":
 	import unittest
