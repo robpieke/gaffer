@@ -43,6 +43,7 @@ namespace GafferTestModule
 {
 
 void testTaskMutex();
+void testTaskMutexWithinIsolate();
 
 } // namespace GafferTestModule
 

@@ -105,3 +105,36 @@ void GafferTestModule::testTaskMutex()
 	GAFFERTEST_ASSERTEQUAL( didInitialisationTasks.size(), tbb::tbb_thread::hardware_concurrency() );
 
 }
+
+void GafferTestModule::testTaskMutexWithinIsolate()
+{
+	TaskMutex mutex;
+
+	auto getMutexWithinIsolate = [&mutex]() {
+
+		ParallelAlgo::isolate(
+			[&mutex]() {
+				TaskMutex::ScopedLock lock( mutex );
+				std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+			}
+		);
+
+	};
+
+	ParallelAlgo::isolate(
+		[&]() {
+			tbb::parallel_for(
+				tbb::blocked_range<size_t>( 0, 1000000 ),
+				[&]( const tbb::blocked_range<size_t> &r ) {
+					getMutexWithinIsolate();
+				}
+			);
+		}
+	);
+
+	// This test was written to guard against deadlocks
+	// caused by an early version of TaskMutex. Hence
+	// it doesn't assert anything; instead we're just very
+	// happy if it gets this far.
+
+}
