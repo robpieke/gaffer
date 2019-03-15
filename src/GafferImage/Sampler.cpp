@@ -36,6 +36,8 @@
 
 #include "GafferImage/Sampler.h"
 
+#include "GafferImage/ImageAlgo.h"
+
 using namespace IECore;
 using namespace Imath;
 using namespace Gaffer;
@@ -99,17 +101,41 @@ Sampler::Sampler( const GafferImage::ImagePlug *plug, const std::string &channel
 	int cacheHeight = int( ceil( float( m_cacheWindow.size().y ) / ImagePlug::tileSize() ) );
 	m_dataCache.resize( m_cacheWidth * cacheHeight, nullptr );
 	m_dataCacheRaw.resize( m_cacheWidth * cacheHeight, nullptr );
+
+	ImageAlgo::parallelProcessTiles(
+		m_plug,
+		[this]( const ImagePlug *image, const V2i &tileOrigin ) {
+			const V2i cacheIndex = ImagePlug::tileIndex( tileOrigin - m_cacheWindow.min );
+			const int cacheI = cacheIndex.x + cacheIndex.y * m_cacheWidth;
+			assert( cacheI >= 0 && cacheI < (int)m_dataCache.size() );
+			m_dataCache[cacheI] = m_plug->channelData( m_channelName, tileOrigin );
+			m_dataCacheRaw[cacheI] = m_dataCache[cacheI]->readable().data();
+		},
+		m_cacheWindow,
+		ImageAlgo::TopToBottom
+
+	);
 }
 
 void Sampler::hash( IECore::MurmurHash &h ) const
 {
-	for ( int x = m_cacheWindow.min.x; x < m_cacheWindow.max.x; x += GafferImage::ImagePlug::tileSize() )
-	{
-		for ( int y = m_cacheWindow.min.y; y < m_cacheWindow.max.y; y += GafferImage::ImagePlug::tileSize() )
-		{
-			h.append( m_plug->channelDataHash( m_channelName, Imath::V2i( x, y ) ) );
-		}
-	}
+	/// \todo Don't use TBB if we only have one tile?
+
+	ImageAlgo::parallelGatherTiles(
+		m_plug,
+		// Get hash for each tile in parallel
+		[this]( const ImagePlug *image, const V2i &tileOrigin ) {
+			return m_plug->channelDataHash( m_channelName, tileOrigin );
+		},
+		// And merge into the result serially
+		[&h]( const ImagePlug *image, const V2i &tileOrigin, const IECore::MurmurHash &tileHash ) {
+			h.append( tileHash );
+		},
+		m_cacheWindow,
+		ImageAlgo::TopToBottom
+
+	);
+
 	h.append( m_boundingMode );
 	h.append( m_dataWindow );
 	h.append( m_sampleWindow );

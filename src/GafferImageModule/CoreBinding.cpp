@@ -171,6 +171,13 @@ class FormatPlugSerialiser : public GafferBindings::ValuePlugSerialiser
 
 };
 
+Sampler *samplerConstructor( const ImagePlug &image, const std::string &channelName, const Imath::Box2i &sampleWindow, Sampler::BoundingMode boundingMode )
+{
+	// Sampler constructor triggers computes, so we need to release GIL.
+	IECorePython::ScopedGILRelease gilRelease;
+	return new Sampler( &image, channelName, sampleWindow, boundingMode );
+}
+
 } // namespace
 
 void GafferImageModule::bindCore()
@@ -283,7 +290,7 @@ void GafferImageModule::bindCore()
 
 	Serialisation::registerSerialiser( FormatPlug::staticTypeId(), new FormatPlugSerialiser );
 
-		class_<Sampler> cls( "Sampler", no_init );
+	class_<Sampler> cls( "Sampler", no_init );
 
 	{
 		// Must bind the BoundingMode first, so that it can be used in the default
@@ -296,8 +303,8 @@ void GafferImageModule::bindCore()
 	}
 
 	cls.def(
-			init<const GafferImage::ImagePlug *, const std::string &, const Imath::Box2i &, Sampler::BoundingMode>
-			(
+			//init<const GafferImage::ImagePlug *, const std::string &, const Imath::Box2i &, Sampler::BoundingMode>
+			"__init__", make_constructor( samplerConstructor, default_call_policies(),
 				(
 					arg( "boundingMode" ) = Sampler::Black
 				)

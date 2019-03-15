@@ -98,6 +98,7 @@ class SamplerTest( GafferImageTest.ImageTestCase ) :
 		r["fileName"].setValue( self.fileName )
 
 		dw = r["out"]["dataWindow"].getValue();
+		print "DW", dw
 		s = GafferImage.Sampler( r["out"], "R", dw, GafferImage.Sampler.BoundingMode.Clamp )
 
 		# Get the exact values of the corner pixels.
