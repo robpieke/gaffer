@@ -77,6 +77,7 @@ BOOST_PYTHON_MODULE( _GafferTest )
 	def( "testDownstreamIterator", &testDownstreamIterator );
 
 	def( "testTaskMutex", &testTaskMutex );
+	def( "testTaskMutexWithinIsolate", &testTaskMutexWithinIsolate );
 	def( "testTaskParallelPolicyClearFromGet", &testTaskParallelPolicyClearFromGet );
 
 }

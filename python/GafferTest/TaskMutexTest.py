@@ -44,5 +44,9 @@ class TaskMutexTest( GafferTest.TestCase ) :
 
 		GafferTest.testTaskMutex()
 
+	def testWithinIsolate( self ) :
+
+		GafferTest.testTaskMutexWithinIsolate()
+
 if __name__ == "__main__":
 	unittest.main()

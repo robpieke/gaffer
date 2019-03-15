@@ -123,17 +123,16 @@ struct TaskMutex : boost::noncopyable
 				// Raf Schietekat on the following thread :
 				//
 				// https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/285550
-				tbb::empty_task *task = new (tbb::task::allocate_root()) tbb::empty_task;
-				WaitingTask *waitingTask = new (task->allocate_child()) WaitingTask;
-				task->set_ref_count( 2 );
+				WaitingTask *waitingTask = new (tbb::task::allocate_root()) WaitingTask;
+				waitingTask->set_ref_count( 2 );
 				waitingTask->next = mutex.m_tasks;
 				mutex.m_tasks = waitingTask;
 				tasksLock.release();
 
 				// Steals tasks until refcount == 1. Refcount only becomes
-				// one after `waitingTask` has been spawned in `release()`.
-				task->wait_for_all();
-				task->destroy( *task );
+				// one after it has been decremented in `release()`.
+				waitingTask->wait_for_all();
+				waitingTask->destroy( *waitingTask );
 
 				return false;
 			}
@@ -156,7 +155,7 @@ struct TaskMutex : boost::noncopyable
 				while( task )
 				{
 					WaitingTask *next = task->next;
-					task->parent()->spawn( *task );
+					task->decrement_ref_count();
 					task = next;
 				}
 				m_mutex->m_tasks = nullptr;
