@@ -75,6 +75,7 @@ class GAFFERSCENE_API FilterResults : public Gaffer::ComputeNode
 		void hash( const Gaffer::ValuePlug *output, const Gaffer::Context *context, IECore::MurmurHash &h ) const override;
 		void compute( Gaffer::ValuePlug *output, const Gaffer::Context *context ) const override;
 
+		CachePolicy computeCachePolicy( const Gaffer::ValuePlug *output ) const override;
 		CachePolicy hashCachePolicy( const Gaffer::ValuePlug *output ) const override;
 
 	private :
