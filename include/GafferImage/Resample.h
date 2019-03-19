@@ -105,6 +105,9 @@ class GAFFERIMAGE_API Resample : public ImageProcessor
 		Imath::Box2i computeDataWindow( const Gaffer::Context *context, const ImagePlug *parent ) const override;
 		IECore::ConstFloatVectorDataPtr computeChannelData( const std::string &channelName, const Imath::V2i &tileOrigin, const Gaffer::Context *context, const ImagePlug *parent ) const override;
 
+		CachePolicy computeCachePolicy( const Gaffer::ValuePlug *output ) const override;
+		CachePolicy hashCachePolicy( const Gaffer::ValuePlug *output ) const override;
+
 	private :
 
 		ImagePlug *horizontalPassPlug();

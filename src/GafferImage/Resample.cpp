@@ -705,3 +705,21 @@ IECore::ConstFloatVectorDataPtr Resample::computeChannelData( const std::string 
 
 	return resultData;
 }
+
+ComputeNode::CachePolicy Resample::computeCachePolicy( const Gaffer::ValuePlug *output ) const
+{
+	if( output == outPlug()->channelDataPlug() || output == horizontalPassPlug()->channelDataPlug() )
+	{
+		return ComputeNode::CachePolicy::TaskParallel;
+	}
+	return ImageProcessor::computeCachePolicy( output );
+}
+
+ComputeNode::CachePolicy Resample::hashCachePolicy( const Gaffer::ValuePlug *output ) const
+{
+	if( output == outPlug()->channelDataPlug() || output == horizontalPassPlug()->channelDataPlug() )
+	{
+		return ComputeNode::CachePolicy::TaskParallel;
+	}
+	return ImageProcessor::hashCachePolicy( output );
+}
