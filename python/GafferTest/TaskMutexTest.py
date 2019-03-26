@@ -48,5 +48,9 @@ class TaskMutexTest( GafferTest.TestCase ) :
 
 		GafferTest.testTaskMutexWithinIsolate()
 
+	def testJoiningOuterTasks( self ) :
+
+		GafferTest.testTaskMutexJoiningOuterTasks()
+
 if __name__ == "__main__":
 	unittest.main()

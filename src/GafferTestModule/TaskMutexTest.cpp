@@ -41,6 +41,8 @@
 #include "Gaffer/Private/IECorePreview/ParallelAlgo.h"
 #include "Gaffer/Private/IECorePreview/TaskMutex.h"
 
+#include "boost/make_unique.hpp"
+
 #include "tbb/enumerable_thread_specific.h"
 #include "tbb/parallel_for.h"
 
@@ -136,5 +138,76 @@ void GafferTestModule::testTaskMutexWithinIsolate()
 	// caused by an early version of TaskMutex. Hence
 	// it doesn't assert anything; instead we're just very
 	// happy if it gets this far.
+
+}
+
+void GafferTestModule::testTaskMutexJoiningOuterTasks()
+{
+	// Mutex and bool used to model lazy initialisation.
+	TaskMutex mutex;
+	bool initialised = false;
+
+	// Tracking to see what various threads get up to.
+	tbb::enumerable_thread_specific<int> didInitialisation;
+	tbb::enumerable_thread_specific<int> didInitialisationTasks;
+	tbb::enumerable_thread_specific<int> gotLock;
+
+	// Lazy initialisation function
+	auto initialise = [&]() {
+
+		TaskMutex::ScopedLock lock( mutex );
+		gotLock.local() = true;
+
+		if( !initialised )
+		{
+			// Simulate an expensive multithreaded
+			// initialisation process.
+			ParallelAlgo::isolate(
+				[&]() {
+					tbb::parallel_for(
+						tbb::blocked_range<size_t>( 0, 1000000 ),
+						[&]( const tbb::blocked_range<size_t> &r ) {
+							didInitialisationTasks.local() = true;
+							std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+						}
+					);
+				}
+			);
+			initialised = true;
+			didInitialisation.local() = true;
+		}
+	};
+
+	// Outer tasks which are performed within a TaskMutex of their own,
+	// but want to collaborate on the inner initialisation.
+
+	using TaskMutexPtr = std::unique_ptr<TaskMutex>;
+	std::vector<TaskMutexPtr> independentTasks;
+	for( size_t i = 0; i < tbb::tbb_thread::hardware_concurrency() * 1000; ++i )
+	{
+		independentTasks.push_back( boost::make_unique<TaskMutex>() );
+	}
+
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>( 0, independentTasks.size() ),
+		[&]( const tbb::blocked_range<size_t> &r ) {
+			for( size_t i = r.begin(); i < r.end(); ++i )
+			{
+				TaskMutex::ScopedLock lock( *independentTasks[i] );
+				ParallelAlgo::isolate(
+					[&]() {
+						initialise();
+					}
+				);
+			}
+		}
+	);
+
+	// Only one thread should have done the initialisation,
+	// but everyone should have got the lock, and everyone should
+	// have done some work.
+	GAFFERTEST_ASSERTEQUAL( didInitialisation.size(), 1 );
+	GAFFERTEST_ASSERTEQUAL( gotLock.size(), tbb::tbb_thread::hardware_concurrency() );
+	GAFFERTEST_ASSERTEQUAL( didInitialisationTasks.size(), tbb::tbb_thread::hardware_concurrency() );
 
 }
