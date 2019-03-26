@@ -101,40 +101,56 @@ Sampler::Sampler( const GafferImage::ImagePlug *plug, const std::string &channel
 	int cacheHeight = int( ceil( float( m_cacheWindow.size().y ) / ImagePlug::tileSize() ) );
 	m_dataCache.resize( m_cacheWidth * cacheHeight, nullptr );
 	m_dataCacheRaw.resize( m_cacheWidth * cacheHeight, nullptr );
+}
 
-	ImageAlgo::parallelProcessTiles(
-		m_plug,
-		[this]( const ImagePlug *image, const V2i &tileOrigin ) {
-			const V2i cacheIndex = ImagePlug::tileIndex( tileOrigin - m_cacheWindow.min );
-			const int cacheI = cacheIndex.x + cacheIndex.y * m_cacheWidth;
-			assert( cacheI >= 0 && cacheI < (int)m_dataCache.size() );
-			m_dataCache[cacheI] = m_plug->channelData( m_channelName, tileOrigin );
-			m_dataCacheRaw[cacheI] = m_dataCache[cacheI]->readable().data();
-		},
-		m_cacheWindow,
-		ImageAlgo::TopToBottom
+void Sampler::preCache()
+{
+	/// Can't do this here! It means we're computing when we might only want to be
+	/// hashing!!!!!!
+	/// We have to check for emptiness here because if we don't, we end up being given
+	/// all the tiles in the data window by `parallelProcessTiles()`. Is that a bit of a trap
+	/// we should remove from the API?
+	if( !BufferAlgo::empty( m_cacheWindow ) )
+	{
+		ImageAlgo::parallelProcessTiles(
+			m_plug,
+			[this]( const ImagePlug *image, const V2i &tileOrigin ) {
+				const V2i cacheIndex = ImagePlug::tileIndex( tileOrigin - m_cacheWindow.min );
+				const int cacheI = cacheIndex.x + cacheIndex.y * m_cacheWidth;
+				assert( cacheI >= 0 && cacheI < (int)m_dataCache.size() );
+				m_dataCache[cacheI] = m_plug->channelData( m_channelName, tileOrigin );
+				m_dataCacheRaw[cacheI] = m_dataCache[cacheI]->readable().data();
+			},
+			m_cacheWindow,
+			ImageAlgo::TopToBottom
 
-	);
+		);
+	}
 }
 
 void Sampler::hash( IECore::MurmurHash &h ) const
 {
 	/// \todo Don't use TBB if we only have one tile?
+	/// Or, better, make `parallelGatherTiles()` skip
+	/// TBB if there's only one tile.
 
-	ImageAlgo::parallelGatherTiles(
-		m_plug,
-		// Get hash for each tile in parallel
-		[this]( const ImagePlug *image, const V2i &tileOrigin ) {
-			return m_plug->channelDataHash( m_channelName, tileOrigin );
-		},
-		// And merge into the result serially
-		[&h]( const ImagePlug *image, const V2i &tileOrigin, const IECore::MurmurHash &tileHash ) {
-			h.append( tileHash );
-		},
-		m_cacheWindow,
-		ImageAlgo::TopToBottom
+	if( !BufferAlgo::empty( m_cacheWindow ) )
+	{
+		ImageAlgo::parallelGatherTiles(
+			m_plug,
+			// Get hash for each tile in parallel
+			[this]( const ImagePlug *image, const V2i &tileOrigin ) {
+				return m_plug->channelDataHash( m_channelName, tileOrigin );
+			},
+			// And merge into the result serially
+			[&h]( const ImagePlug *image, const V2i &tileOrigin, const IECore::MurmurHash &tileHash ) {
+				h.append( tileHash );
+			},
+			m_cacheWindow,
+			ImageAlgo::TopToBottom
 
-	);
+		);
+	}
 
 	h.append( m_boundingMode );
 	h.append( m_dataWindow );

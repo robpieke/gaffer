@@ -75,6 +75,9 @@ class GAFFERIMAGE_API Sampler
 		/// @param boundingMode The method of handling samples that fall outside the data window.
 		Sampler( const GafferImage::ImagePlug *plug, const std::string &channelName, const Imath::Box2i &sampleWindow, BoundingMode boundingMode = Black );
 
+		/// DOCUMENT ME!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		void preCache();
+
 		/// Samples the channel value at the specified
 		/// integer pixel coordinate. It is the caller's
 		/// responsibility to ensure that this point is
