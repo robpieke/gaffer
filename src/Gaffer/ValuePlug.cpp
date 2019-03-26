@@ -394,21 +394,23 @@ class ValuePlug::ComputeProcess : public Process
 
 		static IECore::ConstObjectPtr value( const ValuePlug *plug, const IECore::MurmurHash *precomputedHash, bool cachedOnly )
 		{
-			const ProcessKey processKey( plug, Context::current(), precomputedHash );
+			const ValuePlug *p = sourcePlug( plug );
 
-			if( !processKey.plug->getInput() )
+			if( !p->getInput() )
 			{
-				if( processKey.plug->direction()==In || !processKey.computeNode )
+				if( p->direction()==In || !IECore::runTimeCast<const ComputeNode>( p->node() ) )
 				{
 					// No input connection, and no means of computing
 					// a value. There can only ever be a single value,
 					// which is stored directly on the plug.
-					return processKey.plug->m_staticValue;
+					return p->m_staticValue;
 				}
 			}
 
 			// A plug with an input connection or an output plug on a ComputeNode. There can be many values -
 			// one per context, computed via ComputeNode::compute().
+
+			const ProcessKey processKey( p, plug, Context::current(), precomputedHash );
 
 			if( processKey.cachePolicy == ComputeNode::CachePolicy::Uncached )
 			{
@@ -477,8 +479,8 @@ class ValuePlug::ComputeProcess : public Process
 		// function.
 		struct ProcessKey
 		{
-			ProcessKey( const ValuePlug *downstreamPlug, const Context *context, const IECore::MurmurHash *precomputedHash )
-				:	plug( sourcePlug( downstreamPlug ) ),
+			ProcessKey( const ValuePlug *plug, const ValuePlug *downstreamPlug, const Context *context, const IECore::MurmurHash *precomputedHash )
+				:	plug( plug ),
 					downstreamPlug( downstreamPlug ),
 					context( context ),
 					computeNode( IECore::runTimeCast<const ComputeNode>( plug->node() ) ),
