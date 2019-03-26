@@ -132,9 +132,9 @@ class ValuePlug::HashProcess : public Process
 
 		static IECore::MurmurHash hash( const ValuePlug *plug )
 		{
-			const ProcessKey processKey( plug, Context::current() );
+			const ValuePlug *p = sourcePlug( plug );
 
-			if( const ValuePlug *input = processKey.plug->getInput<ValuePlug>() )
+			if( const ValuePlug *input = p->getInput<ValuePlug>() )
 			{
 				// We know that the input is of a different type to the plug,
 				// because that is guaranteed by sourcePlug(). Get the hash from
@@ -143,21 +143,23 @@ class ValuePlug::HashProcess : public Process
 				// to break apart the cache entries.
 				IECore::MurmurHash h = input->hash();
 				h.append( input->typeId() );
-				h.append( processKey.plug->typeId() );
+				h.append( plug->typeId() );
 				return h;
 			}
-			else if( processKey.plug->direction() == In || !processKey.computeNode )
+			else if( p->direction() == In || !IECore::runTimeCast<const ComputeNode>( p->node() ) )
 			{
 				// No input connection, and no means of computing
 				// a value. There can only ever be a single value,
 				// which is stored directly on the plug - so we return
 				// the hash of that.
-				return processKey.plug->m_staticValue->hash();
+				return p->m_staticValue->hash();
 			}
 
 			// A plug with an input connection or an output plug on a ComputeNode. There can be many values -
 			// one per context, computed by ComputeNode::hash(). Pull the value from our cache, or compute it
 			// using a HashProcess instance.
+
+			const ProcessKey processKey( p, plug, Context::current() );
 
 			if( processKey.cachePolicy == ComputeNode::CachePolicy::Uncached )
 			{
@@ -244,8 +246,8 @@ class ValuePlug::HashProcess : public Process
 		// functions.
 		struct ProcessKey : public HashCacheKey
 		{
-			ProcessKey( const ValuePlug *downstreamPlug, const Context *context )
-				:	HashCacheKey( sourcePlug( downstreamPlug ), context ),
+			ProcessKey( const ValuePlug *plug, const ValuePlug *downstreamPlug, const Context *context )
+				:	HashCacheKey( plug, context ),
 					downstreamPlug( downstreamPlug ),
 					context( context ),
 					computeNode( IECore::runTimeCast<const ComputeNode>( plug->node() ) ),
