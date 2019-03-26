@@ -515,6 +515,7 @@ IECore::ConstFloatVectorDataPtr Resample::computeChannelData( const std::string 
 		inputRegion( tileOrigin, passes, ratio, offset, filter, inputFilterScale ),
 		(Sampler::BoundingMode)boundingModePlug()->getValue()
 	);
+	sampler.preCache();
 
 	const V2i filterRadius = inputFilterRadius( filter, inputFilterScale );
 	const Box2i tileBound( tileOrigin, tileOrigin + V2i( ImagePlug::tileSize() ) );
