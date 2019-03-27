@@ -97,19 +97,19 @@ struct TaskMutex : boost::noncopyable
 			void execute( F &&f )
 			{
 				assert( m_mutex );
-				InternalMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
-				if( !m_mutex->m_arenaAndTaskGroup )
-				{
-					m_mutex->m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
-				}
-				ArenaAndTaskGroupPtr arenaAndTaskGroup = m_mutex->m_arenaAndTaskGroup;
-				arenaLock.release();
-				/// POSSIBLY WE DON'T NEED TO TAKE THE COPY HERE? BECAUSE WE ARE THE ONLY
-				/// ONE WHO WILL WRITE TO m_arenaAndTaskGroup?
+				// InternalMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
+				// if( !m_mutex->m_arenaAndTaskGroup )
+				// {
+				// 	m_mutex->m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
+				// }
+				// ArenaAndTaskGroupPtr arenaAndTaskGroup = m_mutex->m_arenaAndTaskGroup;
+				// arenaLock.release();
+				// /// POSSIBLY WE DON'T NEED TO TAKE THE COPY HERE? BECAUSE WE ARE THE ONLY
+				// /// ONE WHO WILL WRITE TO m_arenaAndTaskGroup?
 
-				m_mutex->m_arenaAndTaskGroup->arena.execute(
-					[this, &f]{ m_mutex->m_arenaAndTaskGroup->taskGroup.run_and_wait( f ); }
-				);
+				// m_mutex->m_arenaAndTaskGroup->arena.execute(
+				// 	[this, &f]{ m_mutex->m_arenaAndTaskGroup->taskGroup.run_and_wait( f ); }
+				// );
 			}
 
 			/// Acquires mutex or returns false. Never does TBB tasks.
@@ -126,46 +126,51 @@ struct TaskMutex : boost::noncopyable
 			template<typename WorkAccepter>
 			bool acquireOr( TaskMutex &mutex, WorkAccepter &&workAccepter )
 			{
-				assert( !m_mutex );
-				if( mutex.m_mutex.try_lock() )
+				// assert( !m_mutex );
+				// if( mutex.m_mutex.try_lock() )
+				// {
+				// 	// Success!
+				// 	m_mutex = &mutex;
+				// 	// NEED THE LOCK FOR THIS, AT LEAST UNTIL YOU GET ATOMIC
+				// 	// OPERATIONS...
+				// 	//assert( !mutex.m_arenaAndTaskGroup );
+				// 	return true;
+				// }
+
+				// if( !workAccepter() )
+				// {
+				// 	return false;
+				// }
+
+				// InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
+				// ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
+				// arenaLock.release();
+				// if( !arenaAndTaskGroup )
+				// {
+				// 	return false;
+				// }
+
+				// arenaAndTaskGroup->arena.execute(
+				// 	[&arenaAndTaskGroup]{ arenaAndTaskGroup->taskGroup.wait(); }
+				// );
+				// return false;
+
+				ArenaAndTaskGroup *arenaAndTaskGroup =  mutex.m_arenaAndTaskGroup.compare_and_swap( g_pending, nullptr );
+				if( arenaAndTaskGroup )
 				{
-					// Success!
-					m_mutex = &mutex;
-					// NEED THE LOCK FOR THIS, AT LEAST UNTIL YOU GET ATOMIC
-					// OPERATIONS...
-					//assert( !mutex.m_arenaAndTaskGroup );
 					return true;
 				}
 
-				if( !workAccepter() )
-				{
-					return false;
-				}
-
-				InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
-				ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
-				arenaLock.release();
-				if( !arenaAndTaskGroup )
-				{
-					return false;
-				}
-
-				arenaAndTaskGroup->arena.execute(
-					[&arenaAndTaskGroup]{ arenaAndTaskGroup->taskGroup.wait(); }
-				);
 				return false;
 			}
 
 			void release()
 			{
 				assert( m_mutex );
-				// Lock the tasks first. We don't want more tasks to
-				// be added in between us releasing the lock and releasing
-				// the existing tasks.
-				InternalMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
-				m_mutex->m_arenaAndTaskGroup = nullptr;
-				// Unlock the mutex.
-				m_mutex->m_mutex.unlock();
+
+				// HOW DO WE STOP PEOPLE FROM STILL USING THIS WHILE WE DESTROY IT?
+
+				m_mutex->m_arenaAndTaskGroup = nullptr;//.compare_and_swap( g_pending, nullptr )
 				m_mutex = nullptr;
 			}
 
@@ -177,21 +182,30 @@ struct TaskMutex : boost::noncopyable
 
 	private :
 
-		typedef tbb::spin_mutex InternalMutex;
+		//typedef tbb::spin_mutex InternalMutex;
 
-		struct ArenaAndTaskGroup
+		struct ArenaAndTaskGroup : public IECore::RefCounted
 		{
+			~ArenaAndTaskGroup() noexcept( true ) // I HAVE NO IDEA WHAT THIS IS ABOUT!!!!!!!!!!!!!!
+			{
+			}
+
 			tbb::task_arena arena;
 			tbb::task_group taskGroup;
 		};
-		typedef std::shared_ptr<ArenaAndTaskGroup> ArenaAndTaskGroupPtr;
+
+		tbb::atomic<ArenaAndTaskGroup *> m_arenaAndTaskGroup;
+
+		static constexpr ArenaAndTaskGroup *g_pending = reinterpret_cast<ArenaAndTaskGroup *>( 1 );
+
+		//typedef std::shared_ptr<ArenaAndTaskGroup> ArenaAndTaskGroupPtr;
 
 		// The actual mutex that is held
 		// by the scoped_lock.
-		InternalMutex m_mutex;
+		//InternalMutex m_mutex;
 
-		InternalMutex m_arenaMutex;
-		ArenaAndTaskGroupPtr m_arenaAndTaskGroup;
+		//InternalMutex m_arenaMutex;
+		//ArenaAndTaskGroupPtr m_arenaAndTaskGroup;
 
 };
 
