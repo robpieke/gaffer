@@ -72,7 +72,7 @@ void GafferTestModule::testTaskMutex()
 		{
 			// Simulate an expensive multithreaded
 			// initialisation process.
-			ParallelAlgo::isolate(
+			lock.execute(
 				[&]() {
 					tbb::parallel_for(
 						tbb::blocked_range<size_t>( 0, 1000000 ),
@@ -162,7 +162,7 @@ void GafferTestModule::testTaskMutexJoiningOuterTasks()
 		{
 			// Simulate an expensive multithreaded
 			// initialisation process.
-			ParallelAlgo::isolate(
+			lock.execute(
 				[&]() {
 					tbb::parallel_for(
 						tbb::blocked_range<size_t>( 0, 1000000 ),
@@ -194,7 +194,7 @@ void GafferTestModule::testTaskMutexJoiningOuterTasks()
 			for( size_t i = r.begin(); i < r.end(); ++i )
 			{
 				TaskMutex::ScopedLock lock( *independentTasks[i] );
-				ParallelAlgo::isolate(
+				lock.execute(
 					[&]() {
 						initialise();
 					}
