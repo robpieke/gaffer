@@ -167,6 +167,12 @@ class Serial
 				return m_it->cacheEntry;
 			}
 
+			template<typename F>
+			void execute( F &&f )
+			{
+				f();
+			}
+
 			void release()
 			{
 				if( m_inited )
@@ -368,6 +374,12 @@ class Parallel
 			{
 				assert( m_writable );
 				return m_item->cacheEntry;
+			}
+
+			template<typename F>
+			void execute( F &&f )
+			{
+				f();
 			}
 
 			void release()
@@ -663,7 +675,7 @@ Value LRUCache<Key, Value, Policy, GetterKey>::get( const GetterKey &key )
 		Cost cost = 0;
 		try
 		{
-			value = m_getter( key, cost );
+			handle.execute( [this, &value, &key, &cost] { value = m_getter( key, cost ); } );
 		}
 		catch( ... )
 		{
