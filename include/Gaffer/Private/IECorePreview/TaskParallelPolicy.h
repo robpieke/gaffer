@@ -35,7 +35,7 @@
 #ifndef IECOREPREVIEW_TASKPARALLELPOLICY_H
 #define IECOREPREVIEW_TASKPARALLELPOLICY_H
 
-#include "IECore/LRUCache.h"
+#include "Gaffer/Private/IECorePreview/LRUCache.h"
 
 #include "Gaffer/Private/IECorePreview/TaskMutex.h"
 
@@ -44,10 +44,6 @@ namespace IECorePreview
 
 namespace LRUCachePolicy
 {
-
-using IECore::LRUCachePolicy::AcquireMode;
-using IECore::LRUCachePolicy::AcquireMode::Insert;
-using IECore::LRUCachePolicy::AcquireMode::InsertWritable;
 
 /// Thread-safe policy that uses TaskMutex so that threads waiting on
 /// the cache can still perform useful work.
@@ -146,6 +142,12 @@ class TaskParallel
 			CacheEntry &writable()
 			{
 				return m_item->cacheEntry;
+			}
+
+			template<typename F>
+			void execute( F &&f )
+			{
+				m_itemLock.execute( f );
 			}
 
 			void release()
