@@ -211,3 +211,24 @@ void GafferTestModule::testTaskMutexJoiningOuterTasks()
 	GAFFERTEST_ASSERTEQUAL( didInitialisationTasks.size(), tbb::tbb_thread::hardware_concurrency() );
 
 }
+
+void GafferTestModule::testTaskMutexHeavyContention()
+{
+	// Model what happens when initialisation has already occurred,
+	// and we just have lots of threads hammering away on the mutex,
+	// wanting to get in and out as quickly as possible.
+	TaskMutex mutex;
+	bool initialised = true;
+
+	tbb::parallel_for(
+		tbb::blocked_range<size_t>( 0, 1000000 ),
+		[&]( const tbb::blocked_range<size_t> &r ) {
+			for( size_t i = r.begin(); i < r.end(); ++i )
+			{
+				TaskMutex::ScopedLock lock( mutex );
+				GAFFERTEST_ASSERTEQUAL( initialised, true );
+			}
+		}
+	);
+}
+

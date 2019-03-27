@@ -79,6 +79,8 @@ BOOST_PYTHON_MODULE( _GafferTest )
 	def( "testTaskMutex", &testTaskMutex );
 	def( "testTaskMutexWithinIsolate", &testTaskMutexWithinIsolate );
 	def( "testTaskMutexJoiningOuterTasks", &testTaskMutexJoiningOuterTasks );
+	def( "testTaskMutexHeavyContention", &testTaskMutexHeavyContention );
+
 	def( "testTaskParallelPolicyClearFromGet", &testTaskParallelPolicyClearFromGet );
 
 }
