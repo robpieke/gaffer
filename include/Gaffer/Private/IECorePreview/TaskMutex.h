@@ -36,7 +36,8 @@
 #define IECOREPREVIEW_TASKMUTEX_H
 
 #include "tbb/spin_mutex.h"
-#include "tbb/task.h"
+#include "tbb/task_arena.h"
+#include "tbb/task_group.h"
 
 namespace IECorePreview
 {
@@ -51,7 +52,6 @@ struct TaskMutex : boost::noncopyable
 {
 
 	TaskMutex()
-		:	m_tasks( nullptr )
 	{
 	}
 
@@ -82,9 +82,11 @@ struct TaskMutex : boost::noncopyable
 			/// Acquires mutex, possibly doing TBB tasks while waiting.
 			void acquire( TaskMutex &mutex )
 			{
-				while( !acquireOr( mutex, [](){ return true; } ) )
-				{
-				}
+				// while( !acquireOr( mutex, [](){ return true; } ) )
+				// {
+				// }
+				mutex.m_mutex.lock();
+				m_mutex = &mutex;
 			}
 
 			/// Acquires mutex or returns false. Never does TBB tasks.
@@ -101,40 +103,41 @@ struct TaskMutex : boost::noncopyable
 			template<typename WorkAccepter>
 			bool acquireOr( TaskMutex &mutex, WorkAccepter &&workAccepter )
 			{
-				assert( !m_mutex );
-
-				InternalMutex::scoped_lock tasksLock( mutex.m_tasksMutex );
-
-				if( mutex.m_mutex.try_lock() )
-				{
-					// Success!
-					m_mutex = &mutex;
-					return true;
-				}
-
-				if( !workAccepter() )
-				{
-					return false;
-				}
-
-				// Help the current holder of the lock by executing tbb
-				// tasks until the lock is released and we can try to
-				// acquire it again. The trick used here was suggested by
-				// Raf Schietekat on the following thread :
-				//
-				// https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/285550
-				WaitingTask *waitingTask = new (tbb::task::allocate_root()) WaitingTask;
-				waitingTask->set_ref_count( 2 );
-				waitingTask->next = mutex.m_tasks;
-				mutex.m_tasks = waitingTask;
-				tasksLock.release();
-
-				// Steals tasks until refcount == 1. Refcount only becomes
-				// one after it has been decremented in `release()`.
-				waitingTask->wait_for_all();
-				waitingTask->destroy( *waitingTask );
-
 				return false;
+				// assert( !m_mutex );
+
+				// InternalMutex::scoped_lock tasksLock( mutex.m_tasksMutex );
+
+				// if( mutex.m_mutex.try_lock() )
+				// {
+				// 	// Success!
+				// 	m_mutex = &mutex;
+				// 	return true;
+				// }
+
+				// if( !workAccepter() )
+				// {
+				// 	return false;
+				// }
+
+				// // Help the current holder of the lock by executing tbb
+				// // tasks until the lock is released and we can try to
+				// // acquire it again. The trick used here was suggested by
+				// // Raf Schietekat on the following thread :
+				// //
+				// // https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/285550
+				// WaitingTask *waitingTask = new (tbb::task::allocate_root()) WaitingTask;
+				// waitingTask->set_ref_count( 2 );
+				// waitingTask->next = mutex.m_tasks;
+				// mutex.m_tasks = waitingTask;
+				// tasksLock.release();
+
+				// // Steals tasks until refcount == 1. Refcount only becomes
+				// // one after it has been decremented in `release()`.
+				// waitingTask->wait_for_all();
+				// waitingTask->destroy( *waitingTask );
+
+				// return false;
 			}
 
 			void release()
@@ -144,21 +147,21 @@ struct TaskMutex : boost::noncopyable
 				// Lock the tasks first. We don't want more tasks to
 				// be added in between us releasing the lock and releasing
 				// the existing tasks.
-				InternalMutex::scoped_lock tasksLock( m_mutex->m_tasksMutex );
+				//InternalMutex::scoped_lock tasksLock( m_mutex->m_tasksMutex );
 
 				// Unlock the mutex.
 				m_mutex->m_mutex.unlock();
 
 				// Spawn all the waiting tasks, so that the `wait_for_all()`
 				// calls in the helper threads can return.
-				WaitingTask *task = m_mutex->m_tasks;
-				while( task )
-				{
-					WaitingTask *next = task->next;
-					task->decrement_ref_count();
-					task = next;
-				}
-				m_mutex->m_tasks = nullptr;
+				// WaitingTask *task = m_mutex->m_tasks;
+				// while( task )
+				// {
+				// 	WaitingTask *next = task->next;
+				// 	task->decrement_ref_count();
+				// 	task = next;
+				// }
+				// m_mutex->m_tasks = nullptr;
 				m_mutex = nullptr;
 			}
 
@@ -172,35 +175,19 @@ struct TaskMutex : boost::noncopyable
 
 		typedef tbb::spin_mutex InternalMutex;
 
-		// A dummy task we use for stealing
-		// work from the tbb scheduler.
-		struct WaitingTask : public tbb::empty_task
+		struct ArenaAndTaskGroup
 		{
-			// Used to create a cheap
-			// linked list of tasks.
-			WaitingTask *next;
-			virtual tbb::task *execute()
-			{
-				return nullptr;
-			}
+			tbb::task_arena arena;
+			tbb::task_group taskGroup;
 		};
+		typedef std::unique_ptr<ArenaAndTaskGroup> ArenaAndTaskGroupPtr;
 
 		// The actual mutex that is held
 		// by the scoped_lock.
 		InternalMutex m_mutex;
 
-		// A second mutex to protect the
-		// list of tasks. This isn't intended
-		// to be visible to the outside world,
-		// so must never be held on return from
-		// any methods.
-		/// \todo There's probably some fancy
-		/// lock-free way of managing the list
-		/// of tasks.
-		InternalMutex m_tasksMutex;
-		// Head of a singly linked list of
-		// worker tasks.
-		WaitingTask *m_tasks;
+		InternalMutex m_arenaMutex;
+		ArenaAndTaskGroupPtr m_arenaAndTaskGroup;
 
 };
 
