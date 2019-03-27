@@ -88,8 +88,10 @@ struct TaskMutex : boost::noncopyable
 
 			void acquire( TaskMutex &mutex )
 			{
+				tbb::internal::atomic_backoff backoff;
 				while( !acquireOr( mutex, [](){ return true; } ) )
 				{
+					backoff.pause();
 				}
 			}
 
@@ -102,7 +104,7 @@ struct TaskMutex : boost::noncopyable
 				{
 					m_mutex->m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
 				}
-				ArenaAndTaskGroupPtr arenaAndTaskGroup = m_mutex->m_arenaAndTaskGroup;
+				//ArenaAndTaskGroupPtr arenaAndTaskGroup = m_mutex->m_arenaAndTaskGroup;
 				arenaLock.release();
 				/// POSSIBLY WE DON'T NEED TO TAKE THE COPY HERE? BECAUSE WE ARE THE ONLY
 				/// ONE WHO WILL WRITE TO m_arenaAndTaskGroup?
@@ -143,7 +145,7 @@ struct TaskMutex : boost::noncopyable
 				}
 
 				InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
-				ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
+				ArenaAndTaskGroupPtr arenaAndTaskGroup;// = mutex.m_arenaAndTaskGroup;
 				arenaLock.release();
 				if( !arenaAndTaskGroup )
 				{
