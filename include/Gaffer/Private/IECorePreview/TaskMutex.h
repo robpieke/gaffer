@@ -42,12 +42,13 @@
 namespace IECorePreview
 {
 
-/// Mutex where threads waiting for access can steal and execute TBB tasks
-/// while they wait. This is particularly useful when the mutex protects a
-/// cached computation that will itself spawn TBB tasks.
+/// Mutex where threads waiting for access can collaborate on TBB tasks
+/// spawned by the holder. Useful for performing expensive delayed
+/// initialisation of shared resources.
 ///
-/// > Note : When spawning TBB tasks while holding a lock, you _must_ use
-/// > [task isolation](https://software.intel.com/en-us/blogs/2018/08/16/the-work-isolation-functionality-in-intel-threading-building-blocks-intel-tbb).
+/// Based on an example posted by "Alex (Intel)" on the following thread :
+///
+/// https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/703652
 struct TaskMutex : boost::noncopyable
 {
 
@@ -79,14 +80,23 @@ struct TaskMutex : boost::noncopyable
 				}
 			}
 
-			/// Acquires mutex, possibly doing TBB tasks while waiting.
 			void acquire( TaskMutex &mutex )
 			{
-				// while( !acquireOr( mutex, [](){ return true; } ) )
-				// {
-				// }
-				mutex.m_mutex.lock();
-				m_mutex = &mutex;
+				while( !acquireOr( mutex, [](){ return true; } ) )
+				{
+				}
+			}
+
+			template<typename F>
+			void execute( F &&f )
+			{
+				assert( m_mutex );
+				if( m_mutex->m_arenaAndTaskGroup )
+				{
+					m_mutex->m_arenaAndTaskGroup->arena.execute(
+						[this, &f]{ m_mutex->m_arenaAndTaskGroup->taskGroup.run_and_wait( f ); }
+					);
+				}
 			}
 
 			/// Acquires mutex or returns false. Never does TBB tasks.
@@ -103,65 +113,47 @@ struct TaskMutex : boost::noncopyable
 			template<typename WorkAccepter>
 			bool acquireOr( TaskMutex &mutex, WorkAccepter &&workAccepter )
 			{
+				assert( !m_mutex );
+
+				InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
+
+				if( mutex.m_mutex.try_lock() )
+				{
+					// Success!
+					m_mutex = &mutex;
+					assert( !mutex.m_arenaAndTaskGroup );
+					mutex.m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
+					return true;
+				}
+
+				if( !workAccepter() )
+				{
+					return false;
+				}
+
+				ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
+				arenaLock.release();
+				if( !arenaAndTaskGroup )
+				{
+					return false;
+				}
+
+				arenaAndTaskGroup->arena.execute(
+					[&arenaAndTaskGroup]{ arenaAndTaskGroup->taskGroup.wait(); }
+				);
 				return false;
-				// assert( !m_mutex );
-
-				// InternalMutex::scoped_lock tasksLock( mutex.m_tasksMutex );
-
-				// if( mutex.m_mutex.try_lock() )
-				// {
-				// 	// Success!
-				// 	m_mutex = &mutex;
-				// 	return true;
-				// }
-
-				// if( !workAccepter() )
-				// {
-				// 	return false;
-				// }
-
-				// // Help the current holder of the lock by executing tbb
-				// // tasks until the lock is released and we can try to
-				// // acquire it again. The trick used here was suggested by
-				// // Raf Schietekat on the following thread :
-				// //
-				// // https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/285550
-				// WaitingTask *waitingTask = new (tbb::task::allocate_root()) WaitingTask;
-				// waitingTask->set_ref_count( 2 );
-				// waitingTask->next = mutex.m_tasks;
-				// mutex.m_tasks = waitingTask;
-				// tasksLock.release();
-
-				// // Steals tasks until refcount == 1. Refcount only becomes
-				// // one after it has been decremented in `release()`.
-				// waitingTask->wait_for_all();
-				// waitingTask->destroy( *waitingTask );
-
-				// return false;
 			}
 
 			void release()
 			{
 				assert( m_mutex );
-
 				// Lock the tasks first. We don't want more tasks to
 				// be added in between us releasing the lock and releasing
 				// the existing tasks.
-				//InternalMutex::scoped_lock tasksLock( m_mutex->m_tasksMutex );
-
+				InternalMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
+				m_mutex->m_arenaAndTaskGroup = nullptr;
 				// Unlock the mutex.
 				m_mutex->m_mutex.unlock();
-
-				// Spawn all the waiting tasks, so that the `wait_for_all()`
-				// calls in the helper threads can return.
-				// WaitingTask *task = m_mutex->m_tasks;
-				// while( task )
-				// {
-				// 	WaitingTask *next = task->next;
-				// 	task->decrement_ref_count();
-				// 	task = next;
-				// }
-				// m_mutex->m_tasks = nullptr;
 				m_mutex = nullptr;
 			}
 
@@ -180,7 +172,7 @@ struct TaskMutex : boost::noncopyable
 			tbb::task_arena arena;
 			tbb::task_group taskGroup;
 		};
-		typedef std::unique_ptr<ArenaAndTaskGroup> ArenaAndTaskGroupPtr;
+		typedef std::shared_ptr<ArenaAndTaskGroup> ArenaAndTaskGroupPtr;
 
 		// The actual mutex that is held
 		// by the scoped_lock.
