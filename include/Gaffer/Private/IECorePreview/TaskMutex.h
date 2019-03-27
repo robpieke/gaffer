@@ -39,6 +39,8 @@
 #include "tbb/task_arena.h"
 #include "tbb/task_group.h"
 
+#include <iostream> // REMOVE ME!
+
 namespace IECorePreview
 {
 
@@ -70,6 +72,10 @@ struct TaskMutex : boost::noncopyable
 				:	m_mutex( nullptr )
 			{
 				acquire( mutex );
+				//std::cerr << "LOCK FREE " << std::atomic_is_lock_free( &m_mutex->m_arenaAndTaskGroup ) << std::endl;
+				// WHAT ABOUT std::experimental?
+				// DON'T SEEM TO HAVE THIS
+				//std::cerr << "LOCK FREE P" << boost::atomic_shared_ptr<ArenaAndTaskGroup>::is_lock_free() << std::endl;
 			}
 
 			~ScopedLock()
@@ -91,12 +97,19 @@ struct TaskMutex : boost::noncopyable
 			void execute( F &&f )
 			{
 				assert( m_mutex );
-				if( m_mutex->m_arenaAndTaskGroup )
+				InternalMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
+				if( !m_mutex->m_arenaAndTaskGroup )
 				{
-					m_mutex->m_arenaAndTaskGroup->arena.execute(
-						[this, &f]{ m_mutex->m_arenaAndTaskGroup->taskGroup.run_and_wait( f ); }
-					);
+					m_mutex->m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
 				}
+				ArenaAndTaskGroupPtr arenaAndTaskGroup = m_mutex->m_arenaAndTaskGroup;
+				arenaLock.release();
+				/// POSSIBLY WE DON'T NEED TO TAKE THE COPY HERE? BECAUSE WE ARE THE ONLY
+				/// ONE WHO WILL WRITE TO m_arenaAndTaskGroup?
+
+				m_mutex->m_arenaAndTaskGroup->arena.execute(
+					[this, &f]{ m_mutex->m_arenaAndTaskGroup->taskGroup.run_and_wait( f ); }
+				);
 			}
 
 			/// Acquires mutex or returns false. Never does TBB tasks.
@@ -114,15 +127,13 @@ struct TaskMutex : boost::noncopyable
 			bool acquireOr( TaskMutex &mutex, WorkAccepter &&workAccepter )
 			{
 				assert( !m_mutex );
-
-				InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
-
 				if( mutex.m_mutex.try_lock() )
 				{
 					// Success!
 					m_mutex = &mutex;
-					assert( !mutex.m_arenaAndTaskGroup );
-					mutex.m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
+					// NEED THE LOCK FOR THIS, AT LEAST UNTIL YOU GET ATOMIC
+					// OPERATIONS...
+					//assert( !mutex.m_arenaAndTaskGroup );
 					return true;
 				}
 
@@ -131,6 +142,7 @@ struct TaskMutex : boost::noncopyable
 					return false;
 				}
 
+				InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
 				ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
 				arenaLock.release();
 				if( !arenaAndTaskGroup )
