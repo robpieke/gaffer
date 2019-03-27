@@ -38,13 +38,14 @@
 
 #include "GafferTest/Assert.h"
 
+#include "Gaffer/Private/IECorePreview/LRUCache.h"
 #include "Gaffer/Private/IECorePreview/TaskParallelPolicy.h"
 
 using namespace IECorePreview;
 
 void GafferTestModule::testTaskParallelPolicyClearFromGet()
 {
-	typedef IECore::LRUCache<int, int, IECorePreview::LRUCachePolicy::TaskParallel> Cache;
+	typedef IECorePreview::LRUCache<int, int, IECorePreview::LRUCachePolicy::TaskParallel> Cache;
 	typedef std::unique_ptr<Cache> CachePtr;
 
 	CachePtr cache;
