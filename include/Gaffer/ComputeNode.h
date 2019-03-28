@@ -63,7 +63,12 @@ class GAFFER_API ComputeNode : public DependencyNode
 
 		IE_CORE_DECLARERUNTIMETYPEDEXTENSION( Gaffer::ComputeNode, ComputeNodeTypeId, DependencyNode );
 
-	protected :
+	// CONSIDER WHETHER OR NOT WE EXPOSE THIS STUFF PUBLICLY. IT'S JUST PUBLIC FOR NOW TO
+	// ALLOW PROCESSKEY TO LIVE OUTSIDE COMPUTEPROCESS. IF IT'S GOING TO BE PUBLIC, PERHAPS
+	// IT SHOULD BE ADVERTISED BY A METHOD ON VALUEPLUG? IT WOULD BE USEFUL TO QUERY I THINK,
+	// ESPECIALLY IN THE TEST CASES FOR THINGS, AND AS PART OF THE MISSION TO GET RID OF THE
+	// USE OF UNSPECIFIED EVERYWHERE.
+	//protected :
 
 		/// Called to compute the hashes for output Plugs. Must be implemented to call the base
 		/// class method, then call input->hash( h ) for all input plugs used in the computation
