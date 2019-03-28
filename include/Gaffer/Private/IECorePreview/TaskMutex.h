@@ -58,6 +58,8 @@ struct TaskMutex : boost::noncopyable
 	{
 	}
 
+	/// INVESTIGATE READ/WRITE LOCKING - IT MIGHT NOT BE SO BAD
+
 	class ScopedLock : boost::noncopyable
 	{
 
@@ -68,14 +70,10 @@ struct TaskMutex : boost::noncopyable
 			{
 			}
 
-			ScopedLock( TaskMutex &mutex )
+			ScopedLock( TaskMutex &mutex, bool acceptWork = true )
 				:	m_mutex( nullptr )
 			{
-				acquire( mutex );
-				//std::cerr << "LOCK FREE " << std::atomic_is_lock_free( &m_mutex->m_arenaAndTaskGroup ) << std::endl;
-				// WHAT ABOUT std::experimental?
-				// DON'T SEEM TO HAVE THIS
-				//std::cerr << "LOCK FREE P" << boost::atomic_shared_ptr<ArenaAndTaskGroup>::is_lock_free() << std::endl;
+				acquire( mutex, acceptWork );
 			}
 
 			~ScopedLock()
@@ -86,10 +84,10 @@ struct TaskMutex : boost::noncopyable
 				}
 			}
 
-			void acquire( TaskMutex &mutex )
+			void acquire( TaskMutex &mutex, bool acceptWork = true )
 			{
 				tbb::internal::atomic_backoff backoff;
-				while( !acquireOr( mutex, [](){ return true; } ) )
+				while( !acquireOr( mutex, [acceptWork](){ return acceptWork; } ) )
 				{
 					backoff.pause();
 				}
@@ -145,7 +143,7 @@ struct TaskMutex : boost::noncopyable
 				}
 
 				InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
-				ArenaAndTaskGroupPtr arenaAndTaskGroup;// = mutex.m_arenaAndTaskGroup;
+				ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
 				arenaLock.release();
 				if( !arenaAndTaskGroup )
 				{
