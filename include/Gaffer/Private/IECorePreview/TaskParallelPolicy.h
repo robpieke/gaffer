@@ -133,7 +133,7 @@ class TaskParallel
 		{
 
 			Handle()
-				:	m_item( nullptr ), m_spawnsTasks( false )
+				:	m_item( nullptr ), m_writable( false ), m_spawnsTasks( false )
 			{
 			}
 
@@ -148,6 +148,7 @@ class TaskParallel
 
 			CacheEntry &writable()
 			{
+				assert( m_writable );
 				return m_item->cacheEntry;
 			}
 
@@ -204,6 +205,7 @@ class TaskParallel
 						// that are already in the cache.
 						binLock.acquire( bin.mutex, /* write = */ false );
 						MapIterator it = bin.map.find( key );
+						bool inserted = false;
 						if( it == bin.map.end() )
 						{
 							if( mode != Insert && mode != InsertWritable )
@@ -211,21 +213,37 @@ class TaskParallel
 								return false;
 							}
 							binLock.upgrade_to_writer();
-							it = bin.map.insert( Item( key ) ).first;
+							std::tie<MapIterator, bool>( it, inserted ) = bin.map.insert( Item( key ) );
 						}
 
 						// Now try to get a lock on the item we want to
-						// acquire. If this fails, we release the bin lock
-						// and the TaskMutex will do useful work until false
-						// is returned and we can loop round and try again.
+						// acquire. When we've just inserted a new item
+						// we take a write lock directly, because we know
+						// we'll need to write to the new item. When insertion
+						// found a pre-existing item we optimistically take
+						// just a read lock, because it is faster when
+						// many threads just need to read from the same
+						// cached item.
+						m_writable = inserted || mode == FindWritable || mode == InsertWritable;
 
 						const bool acquired = m_itemLock.acquireOr(
-							it->mutex, /* write = */ true,
+							it->mutex, /* write = */ m_writable,
 							[&binLock, &spawnsTasks]{ binLock.release(); return spawnsTasks; }
 						);
 
 						if( acquired )
 						{
+							if( !m_writable && mode == Insert && it->cacheEntry.status() == LRUCache::Uncached )
+							{
+								// We found an old item that doesn't have
+								// a value. This can either be because it
+								// was erased but hasn't been popped yet,
+								// or because the item was too big to fit
+								// in the cache. Upgrade to writer status
+								// so it can be updated in get().
+								m_itemLock.upgradeToWriter();
+								m_writable = true;
+							}
 							// Success!
 							m_item = &*it;
 							m_spawnsTasks = spawnsTasks;
@@ -238,6 +256,7 @@ class TaskParallel
 
 				const Item *m_item;
 				typename Item::Mutex::ScopedLock m_itemLock;
+				bool m_writable;
 				bool m_spawnsTasks;
 
 		};
