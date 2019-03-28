@@ -220,7 +220,7 @@ class TaskParallel
 						// is returned and we can loop round and try again.
 
 						const bool acquired = m_itemLock.acquireOr(
-							it->mutex,
+							it->mutex, /* write = */ true,
 							[&binLock, &spawnsTasks]{ binLock.release(); return spawnsTasks; }
 						);
 
