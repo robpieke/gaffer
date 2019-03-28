@@ -52,9 +52,13 @@ class TaskMutexTest( GafferTest.TestCase ) :
 
 		GafferTest.testTaskMutexJoiningOuterTasks()
 
-	def testHeavyContention( self ) :
+	def testHeavyContentionWithWorkAcceptance( self ) :
 
-		GafferTest.testTaskMutexHeavyContention()
+		GafferTest.testTaskMutexHeavyContention( True )
+
+	def testHeavyContentionWithoutWorkAcceptance( self ) :
+
+		GafferTest.testTaskMutexHeavyContention( False )
 
 if __name__ == "__main__":
 	unittest.main()

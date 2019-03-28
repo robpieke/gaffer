@@ -45,7 +45,7 @@ namespace GafferTestModule
 void testTaskMutex();
 void testTaskMutexWithinIsolate();
 void testTaskMutexJoiningOuterTasks();
-void testTaskMutexHeavyContention();
+void testTaskMutexHeavyContention( bool acceptWork );
 
 } // namespace GafferTestModule
 

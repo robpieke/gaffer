@@ -212,7 +212,7 @@ void GafferTestModule::testTaskMutexJoiningOuterTasks()
 
 }
 
-void GafferTestModule::testTaskMutexHeavyContention()
+void GafferTestModule::testTaskMutexHeavyContention( bool acceptWork )
 {
 	// Model what happens when initialisation has already occurred,
 	// and we just have lots of threads hammering away on the mutex,
@@ -225,7 +225,7 @@ void GafferTestModule::testTaskMutexHeavyContention()
 		[&]( const tbb::blocked_range<size_t> &r ) {
 			for( size_t i = r.begin(); i < r.end(); ++i )
 			{
-				TaskMutex::ScopedLock lock( mutex );
+				TaskMutex::ScopedLock lock( mutex, acceptWork );
 				GAFFERTEST_ASSERTEQUAL( initialised, true );
 			}
 		}
