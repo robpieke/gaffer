@@ -61,30 +61,35 @@ void GafferTestModule::testTaskMutex()
 	tbb::enumerable_thread_specific<int> didInitialisationTasks;
 	tbb::enumerable_thread_specific<int> gotLock;
 
-	// Lazy initialisation function
+	// Lazy initialisation function, using an optimistic read lock
+	// and only upgrading to a write lock to perform initialisation.
 
 	auto initialise = [&]() {
 
-		TaskMutex::ScopedLock lock( mutex );
+		TaskMutex::ScopedLock lock( mutex, /* write = */ false );
 		gotLock.local() = true;
 
 		if( !initialised )
 		{
-			// Simulate an expensive multithreaded
-			// initialisation process.
-			lock.execute(
-				[&]() {
-					tbb::parallel_for(
-						tbb::blocked_range<size_t>( 0, 1000000 ),
-						[&]( const tbb::blocked_range<size_t> &r ) {
-							didInitialisationTasks.local() = true;
-							std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-						}
-					);
-				}
-			);
-			initialised = true;
-			didInitialisation.local() = true;
+			lock.upgradeToWriter();
+			if( !initialised ) // Check again, because upgrading to writer may lose the lock temporarily.
+			{
+				// Simulate an expensive multithreaded
+				// initialisation process.
+				lock.execute(
+					[&]() {
+						tbb::parallel_for(
+							tbb::blocked_range<size_t>( 0, 1000000 ),
+							[&]( const tbb::blocked_range<size_t> &r ) {
+								didInitialisationTasks.local() = true;
+								std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+							}
+						);
+					}
+				);
+				initialised = true;
+				didInitialisation.local() = true;
+			}
 		}
 	};
 
@@ -95,7 +100,10 @@ void GafferTestModule::testTaskMutex()
 	tbb::parallel_for(
 		tbb::blocked_range<size_t>( 0, 1000000 ),
 		[&]( const tbb::blocked_range<size_t> &r ) {
-			initialise();
+			for( size_t i = r.begin(); i < r.end(); ++i )
+			{
+				initialise();
+			}
 		}
 	);
 
@@ -216,7 +224,8 @@ void GafferTestModule::testTaskMutexHeavyContention( bool acceptWork )
 {
 	// Model what happens when initialisation has already occurred,
 	// and we just have lots of threads hammering away on the mutex,
-	// wanting to get in and out as quickly as possible.
+	// wanting to get in and out with just read access as quickly as
+	// possible.
 	TaskMutex mutex;
 	bool initialised = true;
 
@@ -225,7 +234,7 @@ void GafferTestModule::testTaskMutexHeavyContention( bool acceptWork )
 		[&]( const tbb::blocked_range<size_t> &r ) {
 			for( size_t i = r.begin(); i < r.end(); ++i )
 			{
-				TaskMutex::ScopedLock lock( mutex, acceptWork );
+				TaskMutex::ScopedLock lock( mutex, /* write = */ false, acceptWork );
 				GAFFERTEST_ASSERTEQUAL( initialised, true );
 			}
 		}
