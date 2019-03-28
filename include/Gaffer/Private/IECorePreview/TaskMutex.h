@@ -36,6 +36,8 @@
 #define IECOREPREVIEW_TASKMUTEX_H
 
 #include "tbb/spin_mutex.h"
+#include "tbb/spin_rw_mutex.h"
+
 #include "tbb/task_arena.h"
 #include "tbb/task_group.h"
 
@@ -58,7 +60,7 @@ struct TaskMutex : boost::noncopyable
 	{
 	}
 
-	/// INVESTIGATE READ/WRITE LOCKING - IT MIGHT NOT BE SO BAD
+	typedef tbb::spin_rw_mutex InternalMutex;
 
 	class ScopedLock : boost::noncopyable
 	{
@@ -70,10 +72,10 @@ struct TaskMutex : boost::noncopyable
 			{
 			}
 
-			ScopedLock( TaskMutex &mutex, bool acceptWork = true )
+			ScopedLock( TaskMutex &mutex, bool write = true, bool acceptWork = true )
 				:	m_mutex( nullptr )
 			{
-				acquire( mutex, acceptWork );
+				acquire( mutex, write, acceptWork );
 			}
 
 			~ScopedLock()
@@ -84,10 +86,10 @@ struct TaskMutex : boost::noncopyable
 				}
 			}
 
-			void acquire( TaskMutex &mutex, bool acceptWork = true )
+			void acquire( TaskMutex &mutex, bool write = true, bool acceptWork = true )
 			{
 				tbb::internal::atomic_backoff backoff;
-				while( !acquireOr( mutex, [acceptWork](){ return acceptWork; } ) )
+				while( !acquireOr( mutex, write, [acceptWork](){ return acceptWork; } ) )
 				{
 					backoff.pause();
 				}
@@ -97,7 +99,7 @@ struct TaskMutex : boost::noncopyable
 			void execute( F &&f )
 			{
 				assert( m_mutex );
-				InternalMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
+				ArenaMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
 				if( !m_mutex->m_arenaAndTaskGroup )
 				{
 					m_mutex->m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
@@ -116,9 +118,9 @@ struct TaskMutex : boost::noncopyable
 			}
 
 			/// Acquires mutex or returns false. Never does TBB tasks.
-			bool tryAcquire( TaskMutex &mutex )
+			bool tryAcquire( TaskMutex &mutex, bool write = true )
 			{
-				return acquireOr( mutex, [](){ return false; } );
+				return acquireOr( mutex, write, [](){ return false; } );
 			}
 
 			/// Tries to acquire the mutex, and returns true on success.
@@ -127,16 +129,13 @@ struct TaskMutex : boost::noncopyable
 			/// holding thread. Returns false on failure, regardless of
 			/// whether or not tasks are done.
 			template<typename WorkAccepter>
-			bool acquireOr( TaskMutex &mutex, WorkAccepter &&workAccepter )
+			bool acquireOr( TaskMutex &mutex, bool write, WorkAccepter &&workAccepter )
 			{
 				assert( !m_mutex );
-				if( mutex.m_mutex.try_lock() )
+				if( m_lock.try_acquire( mutex.m_mutex, write ) )
 				{
 					// Success!
 					m_mutex = &mutex;
-					// NEED THE LOCK FOR THIS, AT LEAST UNTIL YOU GET ATOMIC
-					// OPERATIONS...
-					//assert( !mutex.m_arenaAndTaskGroup );
 					return true;
 				}
 
@@ -145,7 +144,7 @@ struct TaskMutex : boost::noncopyable
 					return false;
 				}
 
-				InternalMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
+				ArenaMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
 				ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
 				arenaLock.release();
 				if( !arenaAndTaskGroup )
@@ -159,23 +158,33 @@ struct TaskMutex : boost::noncopyable
 				return false;
 			}
 
+			bool upgradeToWriter()
+			{
+				return m_lock.upgrade_to_writer();
+			}
+
 			void release()
 			{
 				assert( m_mutex );
-				m_mutex->m_mutex.unlock();
+				m_lock.release();
 				m_mutex = nullptr;
 			}
 
 		private :
 
+			InternalMutex::scoped_lock m_lock;
 			TaskMutex *m_mutex;
 
 	};
 
 	private :
 
-		typedef tbb::spin_mutex InternalMutex;
+		// The actual mutex that is held
+		// by the scoped_lock.
+		InternalMutex m_mutex;
 
+		// The mechanism we use to allow waiting threads
+		// to participate in the work done by `execute()`.
 		struct ArenaAndTaskGroup
 		{
 			tbb::task_arena arena;
@@ -183,11 +192,8 @@ struct TaskMutex : boost::noncopyable
 		};
 		typedef std::shared_ptr<ArenaAndTaskGroup> ArenaAndTaskGroupPtr;
 
-		// The actual mutex that is held
-		// by the scoped_lock.
-		InternalMutex m_mutex;
-
-		InternalMutex m_arenaMutex;
+		typedef tbb::spin_mutex ArenaMutex;
+		ArenaMutex m_arenaMutex;
 		ArenaAndTaskGroupPtr m_arenaAndTaskGroup;
 
 };
