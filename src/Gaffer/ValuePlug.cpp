@@ -301,25 +301,8 @@ class ValuePlug::HashProcess : public Process
 				case ComputeNode::CachePolicy::Parallel :
 				case ComputeNode::CachePolicy::TaskParallel :
 				{
-					// `ComputeNode::hash()` will spawn TBB tasks[^1]. If those tasks steal
-					// outer tasks which lead back into a request for the same hash we're
-					// computing here, we will get deadlock. Use `isolate()` to prevent outer
-					// tasks from being stolen.
-					//
-					// [^1]: Strictly speaking, Parallel cache policy means that `hash()`
-					// won't spawn tasks of its own. But as long as CachePolicy::Unspecified
-					// exists, we don't know that the things it calls upstream won't spawn
-					// their own tasks.
-
-					/// WE DON'T NEED TO ISOLATE HERE DO WE???? THAT HAPPENS INSIDE THE
-					/// CACHE NOW???
-
-					IECorePreview::ParallelAlgo::isolate(
-						[&result, &key]() {
-							HashProcess process( key );
-							result = process.m_result;
-						}
-					);
+					HashProcess process( key );
+					result = process.m_result;
 					break;
 				}
 				default :
@@ -580,25 +563,8 @@ class ValuePlug::ComputeProcess : public Process
 				case ComputeNode::CachePolicy::Parallel :
 				case ComputeNode::CachePolicy::TaskParallel :
 				{
-					// `ComputeNode::compute()` will spawn TBB tasks [^1]. If those tasks steal
-					// outer tasks which lead back into a request for the same hash we're
-					// computing here, we will get deadlock. Use `isolate()` to prevent outer
-					// tasks from being stolen.
-					//
-					// [^1]: Strictly speaking, Parallel cache policy means that `compute()`
-					// won't spawn tasks of its own. But as long as CachePolicy::Unspecified
-					// exists, we don't know that the things it calls upstream won't spawn
-					// their own tasks.
-
-					/// WE DON'T NEED ISOLATION HERE, BECAUSE THE CACHE WILL DO THE ISOLATION,
-					/// RIGHT????
-
-					IECorePreview::ParallelAlgo::isolate(
-						[&result, &key]() {
-							ComputeProcess process( key );
-							result = process.m_result;
-						}
-					);
+					ComputeProcess process( key );
+					result = process.m_result;
 					break;
 				}
 				case ComputeNode::CachePolicy::Uncached :
