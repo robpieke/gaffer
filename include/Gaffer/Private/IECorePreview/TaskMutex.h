@@ -110,6 +110,9 @@ struct TaskMutex : boost::noncopyable
 				m_mutex->m_arenaAndTaskGroup->arena.execute(
 					[this, &f]{ m_mutex->m_arenaAndTaskGroup->taskGroup.run_and_wait( f ); }
 				);
+
+				arenaLock.acquire( m_mutex->m_arenaMutex );
+				m_mutex->m_arenaAndTaskGroup = nullptr;
 			}
 
 			/// Acquires mutex or returns false. Never does TBB tasks.
@@ -159,12 +162,6 @@ struct TaskMutex : boost::noncopyable
 			void release()
 			{
 				assert( m_mutex );
-				// Lock the tasks first. We don't want more tasks to
-				// be added in between us releasing the lock and releasing
-				// the existing tasks.
-				InternalMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
-				m_mutex->m_arenaAndTaskGroup = nullptr;
-				// Unlock the mutex.
 				m_mutex->m_mutex.unlock();
 				m_mutex = nullptr;
 			}
