@@ -243,6 +243,11 @@ class ValuePlug::HashProcess : public Process
 		// construct a HashProcess. We access our caches via this augmented
 		// key so that we have all the information we need in our getter
 		// functions.
+		/// DO WE NEED TO IMPLEMENT SPAWNSTASKS FOR THIS????? WE DO IF WE
+		/// WANT TO HAVE A BLOCKING BUT NOT TASK-BASED MODE, RIGHT???????
+		/// IS SUCH A MODE JUSTIFIED? IF YOU'RE THAT SLOW, SHOULDN'T YOU BE
+		/// FORCED TO USE TASKS? AND IF YOU'RE THAT SLOW, PERHAPS WE CAN
+		/// GET THE ARENA OVERHEAD TO BE NEGLIGIBLE????
 		struct ProcessKey : public HashCacheKey
 		{
 			ProcessKey( const ValuePlug *plug, const ValuePlug *downstreamPlug, const Context *context )
@@ -253,6 +258,7 @@ class ValuePlug::HashProcess : public Process
 					cachePolicy( computeNode ? computeNode->hashCachePolicy( plug ) : ComputeNode::CachePolicy::Uncached )
 			{
 			}
+
 			const ValuePlug *downstreamPlug;
 			const Context *context;
 			const ComputeNode *computeNode;
@@ -288,6 +294,10 @@ class ValuePlug::HashProcess : public Process
 			IECore::MurmurHash result;
 			switch( key.cachePolicy )
 			{
+				/// DOES PARALLEL MODE MAKE SENSE? WE NEED ISOLATION FOR IT, BUT WE DON'T
+				/// WANT TO WASTE TIME ATTEMPTING TO DO WORK IN THE MUTEXES. SO WE'D BE BETTER
+				/// TO USE LIGHTWEIGHT ISOLATION HERE, RATHER THAN USE ARENA-BASED ISOLATION
+				/// INSIDE THE CACHE HANDLE.
 				case ComputeNode::CachePolicy::Parallel :
 				case ComputeNode::CachePolicy::TaskParallel :
 				{
@@ -300,6 +310,10 @@ class ValuePlug::HashProcess : public Process
 					// won't spawn tasks of its own. But as long as CachePolicy::Unspecified
 					// exists, we don't know that the things it calls upstream won't spawn
 					// their own tasks.
+
+					/// WE DON'T NEED TO ISOLATE HERE DO WE???? THAT HAPPENS INSIDE THE
+					/// CACHE NOW???
+
 					IECorePreview::ParallelAlgo::isolate(
 						[&result, &key]() {
 							HashProcess process( key );
@@ -365,6 +379,52 @@ ValuePlug::HashProcess::GlobalCache ValuePlug::HashProcess::g_globalCache( globa
 // The ComputeProcess manages the task of calling ComputeNode::compute()
 // and storing a cache of recently computed results.
 //////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+
+// Contains everything needed to create a ComputeProcess. We access our
+// cache via this key so that we have all the information we need in our getter
+// function.
+struct ProcessKey
+{
+	ProcessKey( const ValuePlug *plug, const ValuePlug *downstreamPlug, const Context *context, const IECore::MurmurHash *precomputedHash )
+		:	plug( plug ),
+			downstreamPlug( downstreamPlug ),
+			context( context ),
+			computeNode( IECore::runTimeCast<const ComputeNode>( plug->node() ) ),
+			cachePolicy( computeNode ? computeNode->computeCachePolicy( plug ) : ComputeNode::CachePolicy::Uncached ),
+			m_hash( precomputedHash ? *precomputedHash : IECore::MurmurHash() )
+	{
+	}
+
+	const ValuePlug *plug;
+	const ValuePlug *downstreamPlug;
+	const Context *context;
+	const ComputeNode *computeNode;
+	const ComputeNode::CachePolicy cachePolicy;
+
+	operator const IECore::MurmurHash &() const
+	{
+		if( m_hash == g_nullHash )
+		{
+			m_hash = plug->hash();
+		}
+		return m_hash;
+	}
+
+	private :
+
+		mutable IECore::MurmurHash m_hash;
+
+};
+
+bool spawnsTasks( const ProcessKey &key )
+{
+	return key.cachePolicy == ComputeNode::CachePolicy::TaskParallel;
+}
+
+} // namespace
 
 class ValuePlug::ComputeProcess : public Process
 {
@@ -445,6 +505,9 @@ class ValuePlug::ComputeProcess : public Process
 					/// overhead, and at some point we'll need to address that.
 					if( !g_cache.get( processKey ) )
 					{
+						/// NEED TO MAKE SURE THIS DOESN'T DO EXTRA WORK! BUT THE PROBLEM IS THAT
+						/// THE POLICY WILL ONLY SEE THE KEY, _NOT_ THE GETTERKEY, SO IT CAN'T USE
+						/// THAT TO DECIDE WHETHER OR NOT TO DO WORK...THIS IS IMPORTANT!!!!!!!!!!
 						g_cache.set( processKey, process.m_result, process.m_result->memoryUsage() );
 					}
 					return process.m_result;
@@ -472,42 +535,6 @@ class ValuePlug::ComputeProcess : public Process
 		static const IECore::InternedString staticType;
 
 	private :
-
-		// Contains everything needed to create a ComputeProcess. We access our
-		// cache via this key so that we have all the information we need in our getter
-		// function.
-		struct ProcessKey
-		{
-			ProcessKey( const ValuePlug *plug, const ValuePlug *downstreamPlug, const Context *context, const IECore::MurmurHash *precomputedHash )
-				:	plug( plug ),
-					downstreamPlug( downstreamPlug ),
-					context( context ),
-					computeNode( IECore::runTimeCast<const ComputeNode>( plug->node() ) ),
-					cachePolicy( computeNode ? computeNode->computeCachePolicy( plug ) : ComputeNode::CachePolicy::Uncached ),
-					m_hash( precomputedHash ? *precomputedHash : IECore::MurmurHash() )
-			{
-			}
-
-			const ValuePlug *plug;
-			const ValuePlug *downstreamPlug;
-			const Context *context;
-			const ComputeNode *computeNode;
-			const ComputeNode::CachePolicy cachePolicy;
-
-			operator const IECore::MurmurHash &() const
-			{
-				if( m_hash == g_nullHash )
-				{
-					m_hash = plug->hash();
-				}
-				return m_hash;
-			}
-
-			private :
-
-				mutable IECore::MurmurHash m_hash;
-
-		};
 
 		ComputeProcess( const ProcessKey &key )
 			:	Process( staticType, key.plug, key.downstreamPlug, key.context )
@@ -549,6 +576,7 @@ class ValuePlug::ComputeProcess : public Process
 			IECore::ConstObjectPtr result;
 			switch( key.cachePolicy )
 			{
+				/// SEE COMMENTS IN HASH GETTER - DOES THIS MAKE SENSE?
 				case ComputeNode::CachePolicy::Parallel :
 				case ComputeNode::CachePolicy::TaskParallel :
 				{
@@ -561,6 +589,10 @@ class ValuePlug::ComputeProcess : public Process
 					// won't spawn tasks of its own. But as long as CachePolicy::Unspecified
 					// exists, we don't know that the things it calls upstream won't spawn
 					// their own tasks.
+
+					/// WE DON'T NEED ISOLATION HERE, BECAUSE THE CACHE WILL DO THE ISOLATION,
+					/// RIGHT????
+
 					IECorePreview::ParallelAlgo::isolate(
 						[&result, &key]() {
 							ComputeProcess process( key );
