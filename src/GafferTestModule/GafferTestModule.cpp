@@ -45,6 +45,7 @@
 #include "GafferTest/MultiplyNode.h"
 #include "GafferTest/RecursiveChildIteratorTest.h"
 
+#include "LRUCacheTest.h"
 #include "TaskMutexTest.h"
 #include "TaskParallelPolicyTest.h"
 
@@ -80,6 +81,8 @@ BOOST_PYTHON_MODULE( _GafferTest )
 	def( "testTaskMutexWithinIsolate", &testTaskMutexWithinIsolate );
 	def( "testTaskMutexJoiningOuterTasks", &testTaskMutexJoiningOuterTasks );
 	def( "testTaskMutexHeavyContention", &testTaskMutexHeavyContention );
+
+	def( "testLRUCacheContentionForOneItem", &testLRUCacheContentionForOneItem );
 
 	def( "testTaskParallelPolicyClearFromGet", &testTaskParallelPolicyClearFromGet );
 

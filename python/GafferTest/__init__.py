@@ -139,6 +139,7 @@ from ProcessMessageHandlerTest import ProcessMessageHandlerTest
 from MonitorAlgoTest import MonitorAlgoTest
 from TaskMutexTest import TaskMutexTest
 from TaskParallelPolicyTest import TaskParallelPolicyTest
+from LRUCacheTest import LRUCacheTest
 
 if __name__ == "__main__":
 	import unittest
