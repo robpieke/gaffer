@@ -45,6 +45,13 @@ namespace IECorePreview
 namespace LRUCachePolicy
 {
 
+/// DOCUMENT ME!!!!!!!!!!!
+template<typename Key>
+bool spawnsTasks( const Key &key )
+{
+	return true;
+}
+
 /// Thread-safe policy that uses TaskMutex so that threads waiting on
 /// the cache can still perform useful work.
 /// \todo This uses the same binned approach to map storage as the
@@ -126,7 +133,7 @@ class TaskParallel
 		{
 
 			Handle()
-				:	m_item( nullptr )
+				:	m_item( nullptr ), m_spawnsTasks( false )
 			{
 			}
 
@@ -147,7 +154,22 @@ class TaskParallel
 			template<typename F>
 			void execute( F &&f )
 			{
-				m_itemLock.execute( f );
+				if( m_spawnsTasks )
+				{
+					// The getter function will spawn tasks. Execute
+					// it via the TaskMutex, so that other threads trying
+					// to access this cache item can help out. This also
+					// means that the getter is executed inside a task_arena,
+					// preventing it from stealing outer tasks that might try
+					// to get this item from the cache, leading to deadlock.
+					m_itemLock.execute( f );
+				}
+				else
+				{
+					// The getter won't do anything involving TBB tasks.
+					// Avoid the overhead of executing via the TaskMutex.
+					f();
+				}
 			}
 
 			void release()
@@ -161,7 +183,7 @@ class TaskParallel
 
 			private :
 
-				bool acquire( Bin &bin, const Key &key, AcquireMode mode )
+				bool acquire( Bin &bin, const Key &key, AcquireMode mode, bool spawnsTasks )
 				{
 					assert( !m_item );
 
@@ -199,13 +221,14 @@ class TaskParallel
 
 						const bool acquired = m_itemLock.acquireOr(
 							it->mutex,
-							[&binLock](){ binLock.release(); return true; }
+							[&binLock, &spawnsTasks]{ binLock.release(); return spawnsTasks; }
 						);
 
 						if( acquired )
 						{
 							// Success!
 							m_item = &*it;
+							m_spawnsTasks = spawnsTasks;
 							return true;
 						}
 					}
@@ -215,12 +238,25 @@ class TaskParallel
 
 				const Item *m_item;
 				typename Item::Mutex::ScopedLock m_itemLock;
+				bool m_spawnsTasks;
 
 		};
 
-		bool acquire( const Key &key, Handle &handle, AcquireMode mode )
+		/// Templated so that we can be called with the GetterKey as
+		/// well as the regular Key.
+		template<typename K>
+		bool acquire( const K &key, Handle &handle, AcquireMode mode )
 		{
-			return handle.acquire( bin( key ), key, mode );
+			return handle.acquire(
+				bin( key ), key, mode,
+				/// Only accept work for Insert mode, because that is
+				/// the one used by `get()`. We don't want to attempt
+				/// to do work in `set()`, because there will be no work
+				/// to do.
+				/// NEED TESTS THAT PROVE THIS IS HAPPENING? OR AT LEAST
+				/// SOME PERFORMANCE TESTS FOR USAGE WITH A NULL GETTER.
+				mode == AcquireMode::Insert && spawnsTasks( key )
+			);
 		}
 
 		void push( Handle &handle )
