@@ -92,6 +92,7 @@ class GAFFER_API ComputeNode : public DependencyNode
 			// Global thread-safe cache. If multiple threads
 			// need the result of the same computation, one thread
 			// does the work while the others block.
+			/// \todo THIS IS CLEARLY A TERRIBLE NAME!!!!!!!!!!!
 			Parallel,
 			// Global thread-safe cache. If multiple threads
 			// need the result of the same computation, one thread
