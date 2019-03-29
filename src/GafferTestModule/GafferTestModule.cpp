@@ -48,6 +48,7 @@
 #include "LRUCacheTest.h"
 #include "TaskMutexTest.h"
 #include "TaskParallelPolicyTest.h"
+#include "ValuePlugTest.h"
 
 #include "IECorePython/ScopedGILRelease.h"
 
@@ -85,5 +86,7 @@ BOOST_PYTHON_MODULE( _GafferTest )
 	def( "testLRUCacheContentionForOneItem", &testLRUCacheContentionForOneItem );
 
 	def( "testTaskParallelPolicyClearFromGet", &testTaskParallelPolicyClearFromGet );
+
+	def( "testValuePlugContentionForOneItem", &testValuePlugContentionForOneItem );
 
 }
