@@ -247,7 +247,8 @@ class ValuePlug::HashProcess : public Process
 		/// WANT TO HAVE A BLOCKING BUT NOT TASK-BASED MODE, RIGHT???????
 		/// IS SUCH A MODE JUSTIFIED? IF YOU'RE THAT SLOW, SHOULDN'T YOU BE
 		/// FORCED TO USE TASKS? AND IF YOU'RE THAT SLOW, PERHAPS WE CAN
-		/// GET THE ARENA OVERHEAD TO BE NEGLIGIBLE????
+		/// GET THE ARENA OVERHEAD TO BE NEGLIGIBLE???? THERE ARE LEGIT REASONS
+		//  FOR THE BLOCKING POLICY - OPENIMAGEIOREADER, ATOMSCROWDREADER.
 		struct ProcessKey : public HashCacheKey
 		{
 			ProcessKey( const ValuePlug *plug, const ValuePlug *downstreamPlug, const Context *context )
