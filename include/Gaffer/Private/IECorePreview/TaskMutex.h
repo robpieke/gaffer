@@ -42,6 +42,7 @@
 #include "tbb/task_group.h"
 
 #include <iostream> // REMOVE ME!
+#include <thread>
 
 namespace IECorePreview
 {
@@ -68,12 +69,12 @@ struct TaskMutex : boost::noncopyable
 		public :
 
 			ScopedLock()
-				:	m_mutex( nullptr )
+				:	m_mutex( nullptr ), m_recursive( false )
 			{
 			}
 
 			ScopedLock( TaskMutex &mutex, bool write = true, bool acceptWork = true )
-				:	m_mutex( nullptr )
+				:	ScopedLock()
 			{
 				acquire( mutex, write, acceptWork );
 			}
@@ -99,11 +100,23 @@ struct TaskMutex : boost::noncopyable
 			void execute( F &&f )
 			{
 				assert( m_mutex );
-				ArenaMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
-				if( !m_mutex->m_arenaAndTaskGroup )
+
+				if( m_recursive )
 				{
-					m_mutex->m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
+					assert( m_mutex->m_arenaAndTaskGroup );
+					assert( m_mutex->m_executingThreadId == std::this_thread::get_id() );
+					m_mutex->m_arenaAndTaskGroup->arena.execute(
+						[this, &f]{ m_mutex->m_arenaAndTaskGroup->taskGroup.run( f ); }
+					);
+					return;
 				}
+
+				ArenaMutex::scoped_lock arenaLock( m_mutex->m_arenaMutex );
+
+				assert( !m_mutex->m_arenaAndTaskGroup );
+				m_mutex->m_arenaAndTaskGroup = std::make_shared<ArenaAndTaskGroup>();
+				m_mutex->m_executingThreadId = std::this_thread::get_id();
+
 				//ArenaAndTaskGroupPtr arenaAndTaskGroup = m_mutex->m_arenaAndTaskGroup;
 				arenaLock.release();
 				/// POSSIBLY WE DON'T NEED TO TAKE THE COPY HERE? BECAUSE WE ARE THE ONLY
@@ -115,6 +128,7 @@ struct TaskMutex : boost::noncopyable
 
 				arenaLock.acquire( m_mutex->m_arenaMutex );
 				m_mutex->m_arenaAndTaskGroup = nullptr;
+				m_mutex->m_executingThreadId = std::thread::id();
 			}
 
 			/// Acquires mutex or returns false. Never does TBB tasks.
@@ -136,6 +150,15 @@ struct TaskMutex : boost::noncopyable
 				{
 					// Success!
 					m_mutex = &mutex;
+					m_recursive = false;
+					return true;
+				}
+
+				ArenaMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
+				if( mutex.m_executingThreadId == std::this_thread::get_id() )
+				{
+					m_mutex = &mutex;
+					m_recursive = true;
 					return true;
 				}
 
@@ -144,7 +167,6 @@ struct TaskMutex : boost::noncopyable
 					return false;
 				}
 
-				ArenaMutex::scoped_lock arenaLock( mutex.m_arenaMutex );
 				ArenaAndTaskGroupPtr arenaAndTaskGroup = mutex.m_arenaAndTaskGroup;
 				arenaLock.release();
 				if( !arenaAndTaskGroup )
@@ -160,13 +182,22 @@ struct TaskMutex : boost::noncopyable
 
 			bool upgradeToWriter()
 			{
+				if( m_recursive )
+				{
+					/// WE NEED TO ENFORCE THIS PROPERLY BY GUARANTEEING THAT
+					/// THE CALLER OF EXECUTE() HAS WRITE ACCESS.
+					return true;
+				}
 				return m_lock.upgrade_to_writer();
 			}
 
 			void release()
 			{
 				assert( m_mutex );
-				m_lock.release();
+				if( !m_recursive )
+				{
+					m_lock.release();
+				}
 				m_mutex = nullptr;
 			}
 
@@ -174,6 +205,7 @@ struct TaskMutex : boost::noncopyable
 
 			InternalMutex::scoped_lock m_lock;
 			TaskMutex *m_mutex;
+			bool m_recursive;
 
 	};
 
@@ -195,6 +227,7 @@ struct TaskMutex : boost::noncopyable
 		typedef tbb::spin_mutex ArenaMutex;
 		ArenaMutex m_arenaMutex;
 		ArenaAndTaskGroupPtr m_arenaAndTaskGroup;
+		std::thread::id m_executingThreadId;
 
 };
 
