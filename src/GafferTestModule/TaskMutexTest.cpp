@@ -241,3 +241,17 @@ void GafferTestModule::testTaskMutexHeavyContention( bool acceptWork )
 	);
 }
 
+void GafferTestModule::testTaskMutexRecursion()
+{
+	TaskMutex mutex;
+	TaskMutex::ScopedLock lock( mutex );
+
+	lock.execute(
+		[&mutex] {
+			TaskMutex::ScopedLock lock( mutex );
+			lock.execute(
+				[]{}
+			);
+		}
+	);
+}

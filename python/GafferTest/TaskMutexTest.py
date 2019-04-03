@@ -60,5 +60,9 @@ class TaskMutexTest( GafferTest.TestCase ) :
 
 		GafferTest.testTaskMutexHeavyContention( False )
 
+	def testRecursion( self ) :
+
+		GafferTest.testTaskMutexRecursion()
+
 if __name__ == "__main__":
 	unittest.main()

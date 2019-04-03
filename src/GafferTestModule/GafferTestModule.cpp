@@ -82,6 +82,7 @@ BOOST_PYTHON_MODULE( _GafferTest )
 	def( "testTaskMutexWithinIsolate", &testTaskMutexWithinIsolate );
 	def( "testTaskMutexJoiningOuterTasks", &testTaskMutexJoiningOuterTasks );
 	def( "testTaskMutexHeavyContention", &testTaskMutexHeavyContention );
+	def( "testTaskMutexRecursion", &testTaskMutexRecursion );
 
 	def( "testLRUCacheContentionForOneItem", &testLRUCacheContentionForOneItem );
 
