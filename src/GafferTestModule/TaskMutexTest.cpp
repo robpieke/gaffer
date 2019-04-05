@@ -244,14 +244,49 @@ void GafferTestModule::testTaskMutexHeavyContention( bool acceptWork )
 void GafferTestModule::testTaskMutexRecursion()
 {
 	TaskMutex mutex;
-	TaskMutex::ScopedLock lock( mutex );
 
-	lock.execute(
-		[&mutex] {
+	std::function<void ( int )> recurse;
+	recurse = [&mutex, &recurse] ( int depth ) {
+		if( depth > 100 )
+		{
+			return;
+		}
+		else
+		{
+			TaskMutex::ScopedLock lock( mutex );
+			lock.execute( [&recurse, depth] { recurse( depth + 1 ); } );
+		}
+	};
+
+	recurse( 0 );
+}
+
+void GafferTestModule::testTaskMutexWorkerRecursion()
+{
+	TaskMutex mutex;
+
+	std::function<void ( int )> recurse;
+	recurse = [&mutex, &recurse] ( int depth ) {
+		if( depth > 1 ) // MAKE ME BIGGER!
+		{
+			std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+		}
+		else
+		{
 			TaskMutex::ScopedLock lock( mutex );
 			lock.execute(
-				[]{}
+				[&recurse, depth] {
+					tbb::parallel_for(
+						0, 2, // MAKE ME BIGGER!
+						[&recurse, depth] ( int i ) {
+							std::cerr << "DEPTH " << depth << " I " << i << " " << std::this_thread::get_id() << std::endl;
+							recurse( depth + 1 );
+						}
+					);
+				}
 			);
 		}
-	);
+	};
+
+	recurse( 0 );
 }

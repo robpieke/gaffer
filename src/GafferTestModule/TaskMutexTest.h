@@ -47,6 +47,7 @@ void testTaskMutexWithinIsolate();
 void testTaskMutexJoiningOuterTasks();
 void testTaskMutexHeavyContention( bool acceptWork );
 void testTaskMutexRecursion();
+void testTaskMutexWorkerRecursion();
 
 } // namespace GafferTestModule
 

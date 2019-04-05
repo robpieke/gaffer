@@ -64,5 +64,9 @@ class TaskMutexTest( GafferTest.TestCase ) :
 
 		GafferTest.testTaskMutexRecursion()
 
+	def testWorkerRecursion( self ) :
+
+		GafferTest.testTaskMutexWorkerRecursion()
+
 if __name__ == "__main__":
 	unittest.main()
