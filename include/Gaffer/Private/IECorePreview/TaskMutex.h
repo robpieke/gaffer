@@ -35,11 +35,19 @@
 #ifndef IECOREPREVIEW_TASKMUTEX_H
 #define IECOREPREVIEW_TASKMUTEX_H
 
+#include "boost/container/flat_set.hpp"
+#include "boost/noncopyable.hpp"
+
 #include "tbb/spin_mutex.h"
 #include "tbb/spin_rw_mutex.h"
 
 #include "tbb/task_arena.h"
 #include "tbb/task_group.h"
+// Enable preview feature that allows us to construct a task_scheduler_observer
+// for a specific task_arena. This feature becomes officially supported in
+// Intel TBB 2019 Update 5, so it is not going to be removed.
+#define TBB_PREVIEW_LOCAL_OBSERVER 1
+#include "tbb/task_scheduler_observer.h"
 
 #include <iostream> // REMOVE ME!
 #include <thread>
@@ -54,6 +62,8 @@ namespace IECorePreview
 /// Based on an example posted by "Alex (Intel)" on the following thread :
 ///
 /// https://software.intel.com/en-us/forums/intel-threading-building-blocks/topic/703652
+///
+/// MAKE ME BE A CLASS!!!!!!
 struct TaskMutex : boost::noncopyable
 {
 
@@ -61,7 +71,7 @@ struct TaskMutex : boost::noncopyable
 	{
 	}
 
-	typedef tbb::spin_rw_mutex InternalMutex;
+	typedef tbb::spin_rw_mutex InternalMutex; // HIDE ME!!!!!!!!!!!
 
 	class ScopedLock : boost::noncopyable
 	{
@@ -96,6 +106,11 @@ struct TaskMutex : boost::noncopyable
 				}
 			}
 
+			bool recursive() const
+			{
+				return m_recursive;
+			}
+
 			template<typename F>
 			void execute( F &&f )
 			{
@@ -104,7 +119,7 @@ struct TaskMutex : boost::noncopyable
 				if( m_recursive )
 				{
 					assert( m_mutex->m_executionState );
-					assert( m_mutex->m_executionState->threadId == std::this_thread::get_id() );
+					assert( m_mutex->m_executionState->arenaObserver.containsThisThread() );
 					f();
 					return;
 				}
@@ -112,7 +127,6 @@ struct TaskMutex : boost::noncopyable
 				ExecutionStateMutex::scoped_lock executionStateLock( m_mutex->m_executionStateMutex );
 				assert( !m_mutex->m_executionState );
 				m_mutex->m_executionState = std::make_shared<ExecutionState>();
-				m_mutex->m_executionState->threadId = std::this_thread::get_id();
 				executionStateLock.release();
 
 				m_mutex->m_executionState->arena.execute(
@@ -152,7 +166,7 @@ struct TaskMutex : boost::noncopyable
 					return false;
 				}
 
-				if( mutex.m_executionState->threadId == std::this_thread::get_id() )
+				if( mutex.m_executionState->arenaObserver.containsThisThread() )
 				{
 					m_mutex = &mutex;
 					m_recursive = true;
@@ -178,7 +192,8 @@ struct TaskMutex : boost::noncopyable
 				if( m_recursive )
 				{
 					/// WE NEED TO ENFORCE THIS PROPERLY BY GUARANTEEING THAT
-					/// THE CALLER OF EXECUTE() HAS WRITE ACCESS.
+					/// THE CALLER OF EXECUTE() HAS WRITE ACCESS. OR WE NEED
+					/// TO MAKE IT FAIL FOR RECURSIVE TASKS.
 					return true;
 				}
 				return m_lock.upgrade_to_writer();
@@ -208,18 +223,68 @@ struct TaskMutex : boost::noncopyable
 		// by the scoped_lock.
 		InternalMutex m_mutex;
 
+		// Tracks worker threads as they enter and exit an arena, so we can determine
+		// whether or not the current thread is inside the arena. We use this to detect
+		// recursion and allow any worker thread to obtain a recursive lock provided
+		// they are currently performing work in service of `ScopedLock::execute()`.
+
+		class ArenaObserver : public tbb::task_scheduler_observer
+		{
+
+			public :
+
+				ArenaObserver( tbb::task_arena &arena )
+					:	tbb::task_scheduler_observer( arena )
+				{
+					observe();
+				}
+
+				bool containsThisThread()
+				{
+					Mutex::scoped_lock lock( m_mutex );
+					return m_threadIdSet.find( std::this_thread::get_id() ) != m_threadIdSet.end();
+				}
+
+			private :
+
+				void on_scheduler_entry( bool isWorker ) override
+				{
+					assert( !containsThisThread() );
+					Mutex::scoped_lock lock( m_mutex );
+					m_threadIdSet.insert( std::this_thread::get_id() );
+				}
+
+				void on_scheduler_exit( bool isWorker ) override
+				{
+					Mutex::scoped_lock lock( m_mutex );
+					m_threadIdSet.erase( std::this_thread::get_id() );
+				}
+
+				using Mutex = tbb::spin_mutex;
+				using ThreadIdSet = boost::container::flat_set<std::thread::id>;
+				Mutex m_mutex;
+				ThreadIdSet m_threadIdSet;
+
+		};
+
 		// The mechanism we use to allow waiting threads
 		// to participate in the work done by `execute()`.
 		// This also contains state used to manage recursive
 		// locks.
-		struct ExecutionState
+		struct ExecutionState : private boost::noncopyable
 		{
+			ExecutionState()
+				:	arenaObserver( arena )
+			{
+			}
+
 			// Arena and task group used to allow
 			// waiting threads to participate in work.
 			tbb::task_arena arena;
 			tbb::task_group taskGroup;
-			// Thread that called execute().
-			std::thread::id threadId;
+			// Observer used to track which threads are
+			// currently inside the arena.
+			ArenaObserver arenaObserver;
 		};
 		typedef std::shared_ptr<ExecutionState> ExecutionStatePtr;
 
