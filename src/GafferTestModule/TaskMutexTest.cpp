@@ -267,19 +267,22 @@ void GafferTestModule::testTaskMutexWorkerRecursion()
 
 	std::function<void ( int )> recurse;
 	recurse = [&mutex, &recurse] ( int depth ) {
-		if( depth > 1 ) // MAKE ME BIGGER!
+		if( depth > 4 )
 		{
 			std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
 		}
 		else
 		{
 			TaskMutex::ScopedLock lock( mutex );
+			if( depth > 0 )
+			{
+				GAFFERTEST_ASSERT( lock.recursive() );
+			}
 			lock.execute(
 				[&recurse, depth] {
 					tbb::parallel_for(
-						0, 2, // MAKE ME BIGGER!
+						0, 4,
 						[&recurse, depth] ( int i ) {
-							std::cerr << "DEPTH " << depth << " I " << i << " " << std::this_thread::get_id() << std::endl;
 							recurse( depth + 1 );
 						}
 					);
