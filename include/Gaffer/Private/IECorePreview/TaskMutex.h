@@ -236,7 +236,12 @@ struct TaskMutex : boost::noncopyable
 				ArenaObserver( tbb::task_arena &arena )
 					:	tbb::task_scheduler_observer( arena )
 				{
-					observe();
+					observe( true );
+				}
+
+				~ArenaObserver()
+				{
+					observe( false );
 				}
 
 				bool containsThisThread()
