@@ -182,6 +182,11 @@ class TaskParallel
 				}
 			}
 
+			bool recursive() const
+			{
+				return m_itemLock.recursive();
+			}
+
 			private :
 
 				bool acquire( Bin &bin, const Key &key, AcquireMode mode, bool spawnsTasks )

@@ -183,6 +183,11 @@ class Serial
 				}
 			}
 
+			bool recursive() const
+			{
+				return false;
+			}
+
 			private :
 
 				void init( MapIterator it )
@@ -389,6 +394,11 @@ class Parallel
 					m_itemLock.release();
 					m_item = nullptr;
 				}
+			}
+
+			bool recursive() const
+			{
+				return false;
 			}
 
 			private :
@@ -683,14 +693,17 @@ Value LRUCache<Key, Value, Policy, GetterKey>::get( const GetterKey &key )
 			throw;
 		}
 
-		assert( cacheEntry.status() != Cached ); // this would indicate that another thread somehow
-		assert( cacheEntry.status() != Failed ); // loaded the same thing as us, which is not the intention.
+		if( !handle.recursive() )
+		{
+			assert( cacheEntry.status() != Cached ); // this would indicate that another thread somehow
+			assert( cacheEntry.status() != Failed ); // loaded the same thing as us, which is not the intention.
 
-		setInternal( key, handle.writable(), value, cost );
-		m_policy.push( handle );
+			setInternal( key, handle.writable(), value, cost );
+			m_policy.push( handle );
 
-		handle.release();
-		limitCost( m_maxCost );
+			handle.release();
+			limitCost( m_maxCost );
+		}
 
 		return value;
 	}
