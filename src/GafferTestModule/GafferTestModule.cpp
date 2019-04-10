@@ -86,6 +86,7 @@ BOOST_PYTHON_MODULE( _GafferTest )
 	def( "testTaskMutexWorkerRecursion", &testTaskMutexWorkerRecursion );
 
 	def( "testLRUCacheContentionForOneItem", &testLRUCacheContentionForOneItem );
+	def( "testLRUCacheRecursion", &testLRUCacheRecursion );
 
 	def( "testTaskParallelPolicyClearFromGet", &testTaskParallelPolicyClearFromGet );
 

@@ -52,5 +52,21 @@ class LRUCacheTest( GafferTest.TestCase ) :
 
 		GafferTest.testLRUCacheContentionForOneItem( "taskParallel" )
 
+	def testRecursionSerial( self ) :
+
+		## MAKE ME PASS!
+		pass
+		#GafferTest.testLRUCacheRecursion( "serial" )
+
+	def testRecursionParallel( self ) :
+
+		## MAKE ME PASS!
+		pass
+		#GafferTest.testLRUCacheRecursion( "parallel" )
+
+	def testRecursionTaskParallel( self ) :
+
+		GafferTest.testLRUCacheRecursion( "taskParallel" )
+
 if __name__ == "__main__":
 	unittest.main()

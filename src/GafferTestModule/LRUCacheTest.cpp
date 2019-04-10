@@ -74,6 +74,57 @@ struct TestLRUCacheContentionForOneItem
 
 };
 
+template<template<typename> class Policy>
+struct TestLRUCacheRecursion
+{
+
+	void operator()()
+	{
+		typedef LRUCache<int, int, Policy> Cache;
+		typedef std::unique_ptr<Cache> CachePtr;
+		int recursionDepth = 0;
+
+		CachePtr cache;
+		cache.reset(
+			new Cache(
+				// Getter that calls back into the cache with the _same_
+				// key, up to a certain limit, and then actually returns
+				// a value. This is basically insane, but it models a
+				// situation that can occur when a getter hits a TaskMutex,
+				// which steals outer tasks that re-enter the cache again,
+				// hit the TaskMutex again and so on. This is used in Gaffer
+				// where a Serial per-thread cache is used as a front to a
+				// shared TaskParallel cache.
+				[&cache, &recursionDepth]( int key, size_t &cost ) {
+					cost = 1;
+					if( ++recursionDepth == 100 )
+					{
+					return key;
+					}
+					else
+					{
+					return cache->get( key );
+					}
+				},
+				// Max cost is small enough that we'll be trying to evict
+				// keys while unwinding the recursion.
+				20
+			)
+		);
+
+		for( int i = 0; i < 100000; ++i )
+		{
+			recursionDepth = 0;
+			cache->clear();
+			GAFFERTEST_ASSERTEQUAL( cache->currentCost(), 0 );
+			GAFFERTEST_ASSERTEQUAL( cache->get( i ), i );
+			GAFFERTEST_ASSERTEQUAL( recursionDepth, 100 );
+			GAFFERTEST_ASSERTEQUAL( cache->currentCost(), 1 );
+		}
+	}
+
+};
+
 template<template<template<typename> class> class F>
 struct DispatchTest
 {
@@ -110,4 +161,9 @@ struct DispatchTest
 void GafferTestModule::testLRUCacheContentionForOneItem( const std::string &policy )
 {
 	DispatchTest<TestLRUCacheContentionForOneItem>()( policy );
+}
+
+void GafferTestModule::testLRUCacheRecursion( const std::string &policy )
+{
+	DispatchTest<TestLRUCacheRecursion>()( policy );
 }
