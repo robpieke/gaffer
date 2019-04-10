@@ -42,8 +42,9 @@
 namespace GafferTestModule
 {
 
+void testLRUCache( const std::string &policy, int numIterations, int numValues, int maxCost, int clearFrequency );
 void testLRUCacheContentionForOneItem( const std::string &policy );
-void testLRUCacheRecursion( const std::string &policy );
+void testLRUCacheRecursionOnOneItem( const std::string &policy );
 
 } // namespace GafferTestModule
 

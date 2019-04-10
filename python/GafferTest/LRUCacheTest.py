@@ -40,6 +40,54 @@ import GafferTest
 
 class LRUCacheTest( GafferTest.TestCase ) :
 
+	def test100PercentOfWorkingSetSerial( self ) :
+
+		GafferTest.testLRUCache( "serial", numIterations = 100000, numValues = 100, maxCost = 100 )
+
+	def test100PercentOfWorkingSetParallel( self ) :
+
+		GafferTest.testLRUCache( "parallel", numIterations = 100000, numValues = 100, maxCost = 100 )
+
+	def test100PercentOfWorkingSetTaskParallel( self ) :
+
+		GafferTest.testLRUCache( "taskParallel", numIterations = 100000, numValues = 100, maxCost = 100 )
+
+	def test90PercentOfWorkingSetSerial( self ) :
+
+		GafferTest.testLRUCache( "serial", numIterations = 100000, numValues = 100, maxCost = 90 )
+
+	def test90PercentOfWorkingSetParallel( self ) :
+
+		GafferTest.testLRUCache( "parallel", numIterations = 100000, numValues = 100, maxCost = 90 )
+
+	def test90PercentOfWorkingSetTaskParallel( self ) :
+
+		GafferTest.testLRUCache( "taskParallel", numIterations = 100000, numValues = 100, maxCost = 90 )
+
+	def test2PercentOfWorkingSetSerial( self ) :
+
+		GafferTest.testLRUCache( "serial", numIterations = 100000, numValues = 100, maxCost = 2 )
+
+	def test2PercentOfWorkingSetParallel( self ) :
+
+		GafferTest.testLRUCache( "parallel", numIterations = 100000, numValues = 100, maxCost = 2 )
+
+	def test2PercentOfWorkingSetTaskParallel( self ) :
+
+		GafferTest.testLRUCache( "taskParallel", numIterations = 100000, numValues = 100, maxCost = 2 )
+
+	def testClearAndGetSerial( self ) :
+
+		GafferTest.testLRUCache( "serial", numIterations = 100000, numValues = 1000, maxCost = 90, clearFrequency = 20 )
+
+	def testClearAndGetParallel( self ) :
+
+		GafferTest.testLRUCache( "parallel", numIterations = 100000, numValues = 1000, maxCost = 90, clearFrequency = 20 )
+
+	def testClearAndGetTaskParallel( self ) :
+
+		GafferTest.testLRUCache( "taskParallel", numIterations = 100000, numValues = 1000, maxCost = 90, clearFrequency = 20 )
+
 	def testContentionForOneItemSerial( self ) :
 
 		GafferTest.testLRUCacheContentionForOneItem( "serial" )
@@ -52,21 +100,21 @@ class LRUCacheTest( GafferTest.TestCase ) :
 
 		GafferTest.testLRUCacheContentionForOneItem( "taskParallel" )
 
-	def testRecursionSerial( self ) :
+	def testRecursionOnOneItemSerial( self ) :
 
 		## MAKE ME PASS!
 		pass
-		#GafferTest.testLRUCacheRecursion( "serial" )
+		#GafferTest.testLRUCacheRecursionOnOneItem( "serial" )
 
-	def testRecursionParallel( self ) :
+	def testRecursionOnOneItemParallel( self ) :
 
 		## MAKE ME PASS!
 		pass
-		#GafferTest.testLRUCacheRecursion( "parallel" )
+		#GafferTest.testLRUCacheRecursionOnOneItem( "parallel" )
 
-	def testRecursionTaskParallel( self ) :
+	def testRecursionOnOneItemTaskParallel( self ) :
 
-		GafferTest.testLRUCacheRecursion( "taskParallel" )
+		GafferTest.testLRUCacheRecursionOnOneItem( "taskParallel" )
 
 if __name__ == "__main__":
 	unittest.main()

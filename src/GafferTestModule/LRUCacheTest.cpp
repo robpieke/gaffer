@@ -49,6 +49,50 @@ namespace
 {
 
 template<template<typename> class Policy>
+struct TestLRUCache
+{
+
+	TestLRUCache( int numIterations, int numValues, int maxCost, int clearFrequency )
+		:	m_numIterations( numIterations ), m_numValues( numValues ), m_maxCost( maxCost ), m_clearFrequency( clearFrequency )
+	{
+	}
+
+	void operator()()
+	{
+		typedef LRUCache<int, int, Policy> Cache;
+		Cache cache(
+			[]( int key, size_t &cost ) { cost = 1; return key; },
+			m_maxCost
+		);
+
+		tbb::parallel_for(
+			tbb::blocked_range<size_t>( 0, m_numIterations ),
+			[&]( const tbb::blocked_range<size_t> &r ) {
+				for( size_t i=r.begin(); i!=r.end(); ++i )
+				{
+					const int k = i % m_numValues;
+					const int v = cache.get( k );
+					GAFFERTEST_ASSERTEQUAL( v, k );
+
+					if( m_clearFrequency && (i % m_clearFrequency == 0) )
+					{
+						cache.clear();
+					}
+				}
+			}
+		);
+	}
+
+	private :
+
+		const int m_numIterations;
+		const int m_numValues;
+		const int m_maxCost;
+		const int m_clearFrequency;
+
+};
+
+template<template<typename> class Policy>
 struct TestLRUCacheContentionForOneItem
 {
 
@@ -75,7 +119,7 @@ struct TestLRUCacheContentionForOneItem
 };
 
 template<template<typename> class Policy>
-struct TestLRUCacheRecursion
+struct TestLRUCacheRecursionOnOneItem
 {
 
 	void operator()()
@@ -89,12 +133,8 @@ struct TestLRUCacheRecursion
 			new Cache(
 				// Getter that calls back into the cache with the _same_
 				// key, up to a certain limit, and then actually returns
-				// a value. This is basically insane, but it models a
-				// situation that can occur when a getter hits a TaskMutex,
-				// which steals outer tasks that re-enter the cache again,
-				// hit the TaskMutex again and so on. This is used in Gaffer
-				// where a Serial per-thread cache is used as a front to a
-				// shared TaskParallel cache.
+				// a value. This is basically insane, but it models
+				// situations that can occur in Gaffer.
 				[&cache, &recursionDepth]( int key, size_t &cost ) {
 					cost = 1;
 					if( ++recursionDepth == 100 )
@@ -129,24 +169,26 @@ template<template<template<typename> class> class F>
 struct DispatchTest
 {
 
-	void operator()( const std::string &policy )
+	template<typename... Args>
+	void operator()( const std::string &policy, Args&&... args )
 	{
 		if( policy == "serial" )
 		{
+			F<LRUCachePolicy::Serial> f( std::forward<Args>( args )... );
 			// Use an arena to limit any parallel TBB work to 1
 			// thread, since Serial policy is not threadsafe.
 			tbb::task_arena arena( 1 );
 			arena.execute(
-				[]{ F<LRUCachePolicy::Serial> f; f(); }
+				[&f]{ f(); }
 			);
 		}
 		else if( policy == "parallel" )
 		{
-			F<LRUCachePolicy::Parallel> f; f();
+			F<LRUCachePolicy::Parallel> f( std::forward<Args>( args )... ); f();
 		}
 		else if( policy == "taskParallel" )
 		{
-			F<LRUCachePolicy::TaskParallel> f; f();
+			F<LRUCachePolicy::TaskParallel> f( std::forward<Args>( args )... ); f();
 		}
 		else
 		{
@@ -158,12 +200,17 @@ struct DispatchTest
 
 } // namespace
 
+void GafferTestModule::testLRUCache( const std::string &policy, int numIterations, int numValues, int maxCost, int clearFrequency )
+{
+	DispatchTest<TestLRUCache>()( policy, numIterations, numValues, maxCost, clearFrequency );
+}
+
 void GafferTestModule::testLRUCacheContentionForOneItem( const std::string &policy )
 {
 	DispatchTest<TestLRUCacheContentionForOneItem>()( policy );
 }
 
-void GafferTestModule::testLRUCacheRecursion( const std::string &policy )
+void GafferTestModule::testLRUCacheRecursionOnOneItem( const std::string &policy )
 {
-	DispatchTest<TestLRUCacheRecursion>()( policy );
+	DispatchTest<TestLRUCacheRecursionOnOneItem>()( policy );
 }
