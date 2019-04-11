@@ -145,7 +145,7 @@ struct TaskMutex : boost::noncopyable
 
 			/// Tries to acquire the mutex, and returns true on success.
 			/// On failure, calls workAccepter and if it returns true,
-			/// performs TBB tasks until the mutex is released by the
+			/// may perform TBB tasks until the mutex is released by the
 			/// holding thread. Returns false on failure, regardless of
 			/// whether or not tasks are done.
 			template<typename WorkAccepter>
@@ -160,6 +160,17 @@ struct TaskMutex : boost::noncopyable
 					return true;
 				}
 
+				/// MOVING THIS HERE SOLVES A DEADLOCK IN THE TASKPARALLEL POLICY
+				/// BECAUSE IT USES THE WORK ACCEPTER TO RELEASE THE BIN LOCK. BUT
+				/// IT'S A BIT ODD TO CALL THE WORK ACCEPTER WHEN THERE'S NO WORK TO
+				/// DO, OR WE MIGHT GET A RECURSIVE LOCK. ON THE OTHER HAND, IT'S
+				/// STRANGE TO NEITHER ACQUIRE NOR CALL THE WORKACCEPTER. WHAT MAKES
+				/// THE MOST SENSE?
+				if( !workAccepter() )
+				{
+					return false;
+				}
+
 				ExecutionStateMutex::scoped_lock executionStateLock( mutex.m_executionStateMutex );
 				if( !mutex.m_executionState )
 				{
@@ -171,11 +182,6 @@ struct TaskMutex : boost::noncopyable
 					m_mutex = &mutex;
 					m_recursive = true;
 					return true;
-				}
-
-				if( !workAccepter() )
-				{
-					return false;
 				}
 
 				ExecutionStatePtr executionState = mutex.m_executionState;
@@ -207,6 +213,8 @@ struct TaskMutex : boost::noncopyable
 					m_lock.release();
 				}
 				m_mutex = nullptr;
+
+				/// DO WE NEED TO WAIT FOR ALL WORKERS HERE???
 			}
 
 		private :
