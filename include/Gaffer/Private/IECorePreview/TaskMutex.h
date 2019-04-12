@@ -43,8 +43,8 @@
 
 #include "tbb/task_arena.h"
 #include "tbb/task_group.h"
-// Enable preview feature that allows us to construct a task_scheduler_observer
-// for a specific task_arena. This feature becomes officially supported in
+// Enable preview feature that allows us to construct a `task_scheduler_observer`
+// for a specific `task_arena`. This feature becomes officially supported in
 // Intel TBB 2019 Update 5, so it is not going to be removed.
 #define TBB_PREVIEW_LOCAL_OBSERVER 1
 #include "tbb/task_scheduler_observer.h"
@@ -242,7 +242,6 @@ struct TaskMutex : boost::noncopyable
 		// whether or not the current thread is inside the arena. We use this to detect
 		// recursion and allow any worker thread to obtain a recursive lock provided
 		// they are currently performing work in service of `ScopedLock::execute()`.
-
 		class ArenaObserver : public tbb::task_scheduler_observer
 		{
 
@@ -276,6 +275,7 @@ struct TaskMutex : boost::noncopyable
 
 				void on_scheduler_exit( bool isWorker ) override
 				{
+					assert( containsThisThread() );
 					Mutex::scoped_lock lock( m_mutex );
 					m_threadIdSet.erase( std::this_thread::get_id() );
 				}
@@ -289,8 +289,6 @@ struct TaskMutex : boost::noncopyable
 
 		// The mechanism we use to allow waiting threads
 		// to participate in the work done by `execute()`.
-		// This also contains state used to manage recursive
-		// locks.
 		struct ExecutionState : private boost::noncopyable
 		{
 			ExecutionState()
