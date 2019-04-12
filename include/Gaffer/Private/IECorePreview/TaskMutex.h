@@ -130,7 +130,14 @@ struct TaskMutex : boost::noncopyable
 				executionStateLock.release();
 
 				m_mutex->m_executionState->arena.execute(
-					[this, &f]{ m_mutex->m_executionState->taskGroup.run_and_wait( f ); }
+					[this, &f] {
+						// Note : We deliberately call `run()` and `wait()` separately
+						// instead of calling `run_and_wait()`. The latter is buggy until
+						// TBB 2018 Update 3, causing calls to `wait()` on other threads to
+						// return immediately rather than do the work we want.
+						m_mutex->m_executionState->taskGroup.run( f );
+						m_mutex->m_executionState->taskGroup.wait();
+					}
 				);
 
 				executionStateLock.acquire( m_mutex->m_executionStateMutex );
