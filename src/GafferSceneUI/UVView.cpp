@@ -72,6 +72,7 @@
 using namespace std;
 using namespace Imath;
 using namespace IECore;
+using namespace IECoreGL;
 using namespace Gaffer;
 using namespace GafferUI;
 using namespace GafferImage;
@@ -396,7 +397,7 @@ class GridGadget : public GafferUI::Gadget
 
 		void doRenderLayer( Layer layer, const Style *style ) const override
 		{
-			if( layer != Layer::Main && layer != Layer::MidBack )
+			if( layer != Layer::Main && layer != Layer::MidBack && layer != Layer::Front )
 			{
 				return;
 			}
@@ -408,33 +409,66 @@ class GridGadget : public GafferUI::Gadget
 			bound.min = V3f( floor( bound.min.x ), floor( bound.min.y ), bound.min.z );
 			bound.max = V3f( ceil( bound.max.x ), ceil( bound.max.y ), bound.max.z );
 
-			const int divisions = layer == Layer::Main ? 1 : 10;
-			const float lineDensity = bound.size().x * divisions / viewport->getViewport().x;
-			const float alpha = 1.0f - IECore::smoothstep( 0.1f, 0.4f, lineDensity );
-			if( alpha == 0.0f )
+			const int divisions = layer == Layer::MidBack ? 10 : 1;
+			const float divisionDensity = bound.size().x * divisions / viewport->getViewport().x;
+
+			if( layer == Layer::Main || layer == Layer::MidBack )
 			{
-				return;
+				// Grid layer
+
+				const float alpha = 1.0f - IECore::smoothstep( 0.1f, 0.4f, divisionDensity );
+				if( alpha == 0.0f )
+				{
+					return;
+				}
+
+				const float lineWidth = (layer == Layer::Main ? 2.0f : 1.0f) * bound.size().x / viewport->getViewport().x;
+				const Color3f lineColor = lerp( Color3f( 0.3 ), Color3f( 0.23 ), alpha );
+
+				for( int i = 0; i <= bound.size().x * divisions; i+= 1 )
+				{
+					float x = bound.min.x + (float)i / (float)divisions;
+					style->renderLine( IECore::LineSegment3f(
+						V3f( x, bound.min.y, bound.min.z ), V3f( x, bound.max.y, bound.min.z ) ),
+						lineWidth, &lineColor
+					);
+				}
+
+				for( int i = 0; i <= bound.size().y * divisions; i+= 1 )
+				{
+					float y = bound.min.y + (float)i / (float)divisions;
+					style->renderLine( IECore::LineSegment3f(
+						V3f( bound.min.x, y, bound.min.z ), V3f( bound.max.x, y, bound.min.z ) ),
+						lineWidth, &lineColor
+					);
+				}
 			}
-
-			const Color3f lineColor = lerp( Color3f( 0.3 ), Color3f( 0.23 ), alpha );
-			const float lineWidth = (layer == Layer::Main ? 2.0f : 1.0f) * bound.size().x / viewport->getViewport().x;
-
-			for( int i = 0; i <= bound.size().x * divisions; i+= 1 )
+			else
 			{
-				float x = bound.min.x + (float)i / (float)divisions;
-				style->renderLine( IECore::LineSegment3f(
-					V3f( x, bound.min.y, bound.min.z ), V3f( x, bound.max.y, bound.min.z ) ),
-					lineWidth, &lineColor
-				);
-			}
+				// UDIM label layer
+				if( divisionDensity > 0.01 )
+				{
+					return;
+				}
 
-			for( int i = 0; i <= bound.size().y * divisions; i+= 1 )
-			{
-				float y = bound.min.y + (float)i / (float)divisions;
-				style->renderLine( IECore::LineSegment3f(
-					V3f( bound.min.x, y, bound.min.z ), V3f( bound.max.x, y, bound.min.z ) ),
-					lineWidth, &lineColor
-				);
+				ViewportGadget::RasterScope rasterScope( viewport );
+				for( int u = bound.min.x; u <= bound.max.x; ++u )
+				{
+					for( int v = bound.min.y; v <= bound.max.y; ++v )
+					{
+						string label = std::to_string( u ) + ", " + std::to_string( v );
+						if( u >= 0 && u < 10 && v >= 0 )
+						{
+							label += " (" + std::to_string( 1001 + v * 10 + u ) + ")";
+						}
+						const V2f rasterPosition = viewport->gadgetToRasterSpace( V3f( u + 0.02, v + 0.02, 0.0f ), this );
+						glPushMatrix();
+						glTranslate( rasterPosition );
+						glScalef( 10, -10, 10 );
+						style->renderText( Style::LabelText, label );
+						glPopMatrix();
+					}
+				}
 			}
 		}
 
