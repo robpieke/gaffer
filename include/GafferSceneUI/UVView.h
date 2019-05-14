@@ -125,6 +125,8 @@ class GAFFERSCENEUI_API UVView : public GafferUI::View
 		bool m_textureGadgetsDirty;
 		std::unique_ptr<Gaffer::BackgroundTask> m_texturesTask;
 
+		bool m_framed;
+
 		static size_t g_firstPlugIndex;
 
 };

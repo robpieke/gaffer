@@ -563,7 +563,7 @@ static InternedString g_gridGadgetName( "gridGadget" );
 IE_CORE_DEFINERUNTIMETYPED( UVView )
 
 UVView::UVView( const std::string &name )
-	:	View( name, new ScenePlug ), m_textureGadgetsDirty( true )
+	:	View( name, new ScenePlug ), m_textureGadgetsDirty( true ), m_framed( false )
 {
 	storeIndexOfNextChild( g_firstPlugIndex );
 
@@ -750,6 +750,12 @@ void UVView::plugDirtied( const Gaffer::Plug *plug )
 
 void UVView::preRender()
 {
+	if( !m_framed )
+	{
+		viewportGadget()->frame( Box3f( V3f( -0.05 ), V3f( 1.05 ) ) );
+		m_framed = true;
+	}
+
 	if( getPaused() || !m_textureGadgetsDirty )
 	{
 		return;
