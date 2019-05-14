@@ -48,7 +48,6 @@ import GafferSceneUI
 ## \todo
 #
 # - Grid annotations - UV and UDIM
-# - Frame properly for first render
 class UVInspector( GafferUI.NodeSetEditor ) :
 
 	def __init__( self, scriptNode, **kw ) :
