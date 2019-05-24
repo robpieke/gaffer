@@ -221,7 +221,7 @@ void AnnotationsGadget::doRenderLayer( Layer layer, const Style *style ) const
 
 			const Box3f textBounds = style->textBound( Style::LabelText, annotations.numericBookmark.string() );
 
-			const Imath::Color3f textColor( 1.0f );
+			const Imath::Color4f textColor( 1.0f );
 			glPushMatrix();
 				IECoreGL::glTranslate( V2f( b.min.x + 1.0 - textBounds.size().x * 0.5, b.max.y - textBounds.size().y * 0.5 - 0.7 ) );
 				style->renderText( Style::BodyText, annotations.numericBookmark.string(), Style::NormalState, &textColor );
@@ -233,8 +233,8 @@ void AnnotationsGadget::doRenderLayer( Layer layer, const Style *style ) const
 			glPushMatrix();
 			IECoreGL::glTranslate( V2f( b.max.x + g_offset + g_borderWidth, b.max.y - g_borderWidth ) );
 
-			const Color3f midGrey( 0.65 );
-			const Color3f darkGrey( 0.05 );
+			const Color4f midGrey( 0.65, 0.65, 0.65, 1.0 );
+			const Color4f darkGrey( 0.05, 0.05, 0.05, 1.0 );
 			float previousHeight = 0;
 			for( const auto &a : annotations.standardAnnotations )
 			{
@@ -254,10 +254,13 @@ void AnnotationsGadget::doRenderLayer( Layer layer, const Style *style ) const
 				/// \todo We're using `renderNodeFrame()` because it's the only way we can specify a colour,
 				/// but really we want `renderFrame()` to provide that option. Or we could consider having
 				/// explicit annotation rendering methods in the Style class.
+
+				const Color4f color = a.color ? Color4f( a.color->readable() ) : darkGrey;
+
 				style->renderNodeFrame(
 					Box2f( V2f( 0, textBounds.min.y ), V2f( textBounds.max.x, textBounds.max.y ) ),
 					g_borderWidth, Style::NormalState,
-					a.color ? &(a.color->readable()) : &darkGrey
+					&color
 				);
 				style->renderText( Style::BodyText, a.text->readable(), Style::NormalState, &midGrey );
 				previousHeight = textBounds.size().y + g_borderWidth * 2;
