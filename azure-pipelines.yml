@@ -49,3 +49,8 @@ steps:
   inputs:
     artifactName: 'testArtifact'
     targetPath: 'test.txt'
+
+- script: |
+    pip install azure-pipelines
+    pip install PyGithub
+  displayName: "Build Bot Links"
