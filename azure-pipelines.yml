@@ -22,18 +22,30 @@ steps:
     ARNOLD_LOGIN: $(arnoldLogin)
     ARNOLD_PASSWORD: $(arnoldPassword)
 
+#    scons -j 2 install ENV_VARS_TO_IMPORT=PATH DELIGHT_ROOT=$DELIGHT ARNOLD_ROOT=$ARNOLD_ROOT BUILD_CACHEDIR=sconsCache
+
 - script: |
     g++ --version
     Xvfb :99 -screen 0 1280x1024x24 &
     metacity&
-    scons -j 2 install ENV_VARS_TO_IMPORT=PATH DELIGHT_ROOT=$DELIGHT ARNOLD_ROOT=$ARNOLD_ROOT BUILD_CACHEDIR=sconsCache
+    echo XXX > test.txt
   displayName: 'Build'
   env:
     DISPLAY: :99.0
 
+#    ./install/gaffer-*/bin/gaffer test
+
 - script: |
-    ./install/gaffer-*/bin/gaffer test
+    echo "All good"
+    echo "Source version" $(Build.SourceVersion)
+    echo "PR ID" $(System.PullRequest.PullRequestId)
+    echo "PR Number" $(System.PullRequest.PullRequestNumber)
   displayName: 'Test'
   env:
     DISPLAY: :99.0
     USER: azureTestUser # ImageWriterTest requires $USER but by default Azure doesn't provide it
+
+- task: PublishPipelineArtifact@0
+  inputs:
+    artifactName: 'testArtifact'
+    targetPath: 'test.txt'
