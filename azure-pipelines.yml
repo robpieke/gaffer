@@ -14,9 +14,9 @@ variables:
 steps:
 
 - script: |
-    ./config/travis/installDelight.sh
-    ./config/azure/installArnold.sh
-    ./config/travis/installDependencies.sh
+    echo ./config/travis/installDelight.sh
+    echo ./config/azure/installArnold.sh
+    echo ./config/travis/installDependencies.sh
   displayName: 'Install dependencies'
   env:
     ARNOLD_LOGIN: $(arnoldLogin)
@@ -51,6 +51,8 @@ steps:
     targetPath: 'test.txt'
 
 - script: |
-    pip install azure-pipelines
+    yum install -y python2-dev
+    pip install azure-devops
     pip install PyGithub
   displayName: "Build Bot Links"
+
