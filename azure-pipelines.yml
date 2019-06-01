@@ -51,8 +51,8 @@ steps:
     targetPath: 'test.txt'
 
 - script: |
-    yum install -y python2-dev
-    pip install azure-devops
-    pip install PyGithub
+    sudo yum install -y python2-dev
+    sudo pip install azure-devops
+    sudo pip install PyGithub
   displayName: "Build Bot Links"
 
