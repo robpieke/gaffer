@@ -1044,7 +1044,7 @@ void StandardStyle::renderImage( const Imath::Box2f &box, const IECoreGL::Textur
 }
 
 
-void StandardStyle::renderLine( const IECore::LineSegment3f &line, float width, const Imath::Color3f *userColor ) const
+void StandardStyle::renderLine( const IECore::LineSegment3f &line, float width, const Imath::Color4f *userColor ) const
 {
 	glUniform1i( g_isCurveParameter, 1 );
 	glUniform1i( g_borderParameter, 0 );

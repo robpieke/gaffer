@@ -234,7 +234,7 @@ void AnnotationsGadget::doRenderLayer( Layer layer, const Style *style ) const
 			IECoreGL::glTranslate( V2f( b.max.x + g_offset + g_borderWidth, b.max.y - g_borderWidth ) );
 
 			const Color4f midGrey( 0.65, 0.65, 0.65, 1.0 );
-			const Color4f darkGrey( 0.05, 0.05, 0.05, 1.0 );
+			const Color3f darkGrey( 0.05, 0.05, 0.05 );
 			float previousHeight = 0;
 			for( const auto &a : annotations.standardAnnotations )
 			{
@@ -255,7 +255,7 @@ void AnnotationsGadget::doRenderLayer( Layer layer, const Style *style ) const
 				/// but really we want `renderFrame()` to provide that option. Or we could consider having
 				/// explicit annotation rendering methods in the Style class.
 
-				const Color4f color = a.color ? Color4f( a.color->readable() ) : darkGrey;
+				const Color3f color = a.color ? a.color->readable() : darkGrey;
 
 				style->renderNodeFrame(
 					Box2f( V2f( 0, textBounds.min.y ), V2f( textBounds.max.x, textBounds.max.y ) ),
