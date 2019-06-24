@@ -1337,7 +1337,7 @@ static const std::string &fragmentSource()
 		"	}"
 		"	else if( textureType==2 )"
 		"	{"
-		"		OUTCOLOR = vec4( OUTCOLOR.rgb, texture2D( texture, gl_TexCoord[0].xy ).a );"
+		"		OUTCOLOR = vec4( OUTCOLOR.rgb, OUTCOLOR.a * texture2D( texture, gl_TexCoord[0].xy ).a );"
 		"	}\n"
 
 		"#if __VERSION__ >= 330\n"
