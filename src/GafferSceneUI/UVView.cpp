@@ -406,11 +406,9 @@ class GridGadget : public GafferUI::Gadget
 			Box3f bound;
 			bound.extendBy( viewport->rasterToGadgetSpace( V2f( 0 ), this ).p0 );
 			bound.extendBy( viewport->rasterToGadgetSpace( viewport->getViewport(), this ).p0 );
-			bound.min = V3f( floor( bound.min.x ), floor( bound.min.y ), bound.min.z );
-			bound.max = V3f( ceil( bound.max.x ), ceil( bound.max.y ), bound.max.z );
 
 			const int divisions = layer == Layer::MidBack ? 10 : 1;
-			const float divisionDensity = bound.size().x * divisions / viewport->getViewport().x;
+			const float divisionDensity = bound.size().x * (float)divisions / (float)viewport->getViewport().x;
 
 			if( layer == Layer::Main || layer == Layer::MidBack )
 			{
@@ -425,18 +423,16 @@ class GridGadget : public GafferUI::Gadget
 				const float lineWidth = (layer == Layer::Main ? 2.0f : 1.0f) * bound.size().x / viewport->getViewport().x;
 				const Color4f lineColor( 0.23, 0.23, 0.23, alpha );
 
-				for( int i = 0; i <= bound.size().x * divisions; i+= 1 )
+				for( float x = floor( bound.min.x ); x <= bound.max.x; x += 1.0f / (float)divisions )
 				{
-					float x = bound.min.x + (float)i / (float)divisions;
 					style->renderLine( IECore::LineSegment3f(
 						V3f( x, bound.min.y, bound.min.z ), V3f( x, bound.max.y, bound.min.z ) ),
 						lineWidth, &lineColor
 					);
 				}
 
-				for( int i = 0; i <= bound.size().y * divisions; i+= 1 )
+				for( float y = floor( bound.min.y ); y <= bound.max.y; y += 1.0f / (float)divisions )
 				{
-					float y = bound.min.y + (float)i / (float)divisions;
 					style->renderLine( IECore::LineSegment3f(
 						V3f( bound.min.x, y, bound.min.z ), V3f( bound.max.x, y, bound.min.z ) ),
 						lineWidth, &lineColor
@@ -445,20 +441,20 @@ class GridGadget : public GafferUI::Gadget
 			}
 			else
 			{
-				const float alpha = 1.0f - IECore::smoothstep( 0.005f, 0.01f, divisionDensity );
-
 				// UDIM label layer
+
+				const float alpha = 1.0f - IECore::smoothstep( 0.005f, 0.01f, divisionDensity );
 				if( alpha <= 0.0f )
 				{
 					return;
 				}
 
-				const Color4f textColor( 1, 1, 1, alpha );
+				const Color4f textColor( 1, 1, 1, alpha * 0.75 );
 
 				ViewportGadget::RasterScope rasterScope( viewport );
-				for( int u = bound.min.x; u <= bound.max.x; ++u )
+				for( int u = floor( bound.min.x ); u <= bound.max.x; ++u )
 				{
-					for( int v = bound.min.y; v <= bound.max.y; ++v )
+					for( int v = floor( bound.min.y ); v <= bound.max.y; ++v )
 					{
 						string label = std::to_string( u ) + ", " + std::to_string( v );
 						if( u >= 0 && u < 10 && v >= 0 )
