@@ -417,13 +417,13 @@ class GridGadget : public GafferUI::Gadget
 				// Grid layer
 
 				const float alpha = 1.0f - IECore::smoothstep( 0.1f, 0.4f, divisionDensity );
-				if( alpha == 0.0f )
+				if( alpha <= 0.0f )
 				{
 					return;
 				}
 
 				const float lineWidth = (layer == Layer::Main ? 2.0f : 1.0f) * bound.size().x / viewport->getViewport().x;
-				const Color3f lineColor = lerp( Color3f( 0.3 ), Color3f( 0.23 ), alpha );
+				const Color4f lineColor( 0.23, 0.23, 0.23, alpha );
 
 				for( int i = 0; i <= bound.size().x * divisions; i+= 1 )
 				{
@@ -445,11 +445,15 @@ class GridGadget : public GafferUI::Gadget
 			}
 			else
 			{
+				const float alpha = 1.0f - IECore::smoothstep( 0.005f, 0.01f, divisionDensity );
+
 				// UDIM label layer
-				if( divisionDensity > 0.01 )
+				if( alpha <= 0.0f )
 				{
 					return;
 				}
+
+				const Color4f textColor( 1, 1, 1, alpha );
 
 				ViewportGadget::RasterScope rasterScope( viewport );
 				for( int u = bound.min.x; u <= bound.max.x; ++u )
@@ -465,7 +469,7 @@ class GridGadget : public GafferUI::Gadget
 						glPushMatrix();
 						glTranslate( rasterPosition );
 						glScalef( 10, -10, 10 );
-						style->renderText( Style::LabelText, label );
+						style->renderText( Style::LabelText, label, Style::NormalState, &textColor );
 						glPopMatrix();
 					}
 				}
