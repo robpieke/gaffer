@@ -63,8 +63,6 @@ class UVInspector( GafferUI.NodeSetEditor ) :
 			with GafferUI.Frame( borderWidth = 4, borderStyle = GafferUI.Frame.BorderStyle.None ) :
 				toolbar = GafferUI.NodeToolbar.create( self.__uvView )
 
-			GafferUI.Divider()
-
 			self.__gadgetWidget = GafferUI.GadgetWidget(
 				bufferOptions = {
 					GafferUI.GLWidget.BufferOptions.Double,
