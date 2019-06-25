@@ -42,6 +42,8 @@
 
 #include "IECore/CompoundObject.h"
 
+#include "boost/unordered_set.hpp"
+
 namespace IECoreScenePreview
 {
 
@@ -146,6 +148,8 @@ class IECORESCENE_API Renderer : public IECore::RefCounted
 		virtual AttributesInterfacePtr attributes( const IECore::CompoundObject *attributes ) = 0;
 
 		IE_CORE_FORWARDDECLARE( ObjectInterface );
+		using ObjectSet = boost::unordered_set<ObjectInterfacePtr>;
+		using ObjectSetPtr = std::shared_ptr<ObjectSet>;
 
 		/// A handle to an object in the renderer. The reference counting semantics of an
 		/// ObjectInterfacePtr are as follows :
@@ -183,6 +187,9 @@ class IECORESCENE_API Renderer : public IECore::RefCounted
 				/// such as Arnold where the attributes are not orthogonal to the
 				/// geometric representation.
 				virtual bool attributes( const AttributesInterface *attributes ) = 0;
+				/// Declares links between this object and others.
+				/// \todo MAKE PURE VIRTUAL.
+				virtual void links( IECore::InternedString &type, const ObjectSetPtr &objects ) {};
 
 			protected :
 
