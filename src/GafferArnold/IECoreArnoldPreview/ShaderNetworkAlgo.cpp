@@ -50,7 +50,8 @@
 
 #include "boost/algorithm/string/predicate.hpp"
 #include "boost/lexical_cast.hpp"
-#include "boost/unordered_map.hpp"
+
+#include <unordered_map>
 
 using namespace std;
 using namespace IECore;
@@ -111,7 +112,7 @@ void setSplineParameter( AtNode *node, const std::string &name, const Spline &sp
 	AiNodeSetStr( node, AtString( ( name + "Basis" ).c_str() ), basis );
 }
 
-typedef boost::unordered_map<ShaderNetwork::Parameter, AtNode *> ShaderMap;
+using ShaderMap = std::unordered_map<ShaderNetwork::Parameter, AtNode *>;
 
 // Equivalent to Python's `s.partition( c )[0]`.
 InternedString partitionStart( const InternedString &s, char c )
