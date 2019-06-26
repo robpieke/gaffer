@@ -68,6 +68,7 @@ const AtString g_linearArnoldString( "linear" );
 const AtString g_outputArnoldString( "output" );
 const AtString g_shaderNameArnoldString( "shadername" );
 const AtString g_oslArnoldString( "osl" );
+const AtString g_nameArnoldString( "name" );
 
 template<typename Spline>
 void setSplineParameter( AtNode *node, const std::string &name, const Spline &spline )
@@ -142,7 +143,8 @@ InternedString partitionEnd( const InternedString &s, char c )
 	}
 }
 
-AtNode *convertWalk( const ShaderNetwork::Parameter &outputParameter, const IECoreScene::ShaderNetwork *shaderNetwork, const std::string &namePrefix, const AtNode *parentNode, vector<AtNode *> &nodes, ShaderMap &converted )
+template<typename NodeCreator>
+AtNode *convertWalk( const ShaderNetwork::Parameter &outputParameter, const IECoreScene::ShaderNetwork *shaderNetwork, const std::string &namePrefix, const NodeCreator &nodeCreator, vector<AtNode *> &nodes, ShaderMap &converted )
 {
 	// Reuse previously created node if we can. OSL shaders
 	// can have multiple outputs, but each Arnold shader node
@@ -174,7 +176,7 @@ AtNode *convertWalk( const ShaderNetwork::Parameter &outputParameter, const IECo
 
 	if( isOSLShader )
 	{
-		node = AiNode( g_oslArnoldString, AtString( nodeName.c_str() ), parentNode );
+		node = nodeCreator( g_oslArnoldString, AtString( nodeName.c_str() ) );
 		if( oslOutput.string().size() )
 		{
 			AiNodeDeclare( node, g_outputArnoldString, "constant STRING" );
@@ -184,10 +186,9 @@ AtNode *convertWalk( const ShaderNetwork::Parameter &outputParameter, const IECo
 	}
 	else
 	{
-		node = AiNode(
+		node = nodeCreator(
 			AtString( shader->getName().c_str() ),
-			AtString( nodeName.c_str() ),
-			parentNode
+			AtString( nodeName.c_str() )
 		);
 	}
 
@@ -230,7 +231,7 @@ AtNode *convertWalk( const ShaderNetwork::Parameter &outputParameter, const IECo
 
 	for( const auto &connection : shaderNetwork->inputConnections( outputParameter.shader ) )
 	{
-		AtNode *sourceNode = convertWalk( connection.source, shaderNetwork, namePrefix, parentNode, nodes, converted );
+		AtNode *sourceNode = convertWalk( connection.source, shaderNetwork, namePrefix, nodeCreator, nodes, converted );
 		if( !sourceNode )
 		{
 			continue;
@@ -287,9 +288,52 @@ std::vector<AtNode *> convert( const IECoreScene::ShaderNetwork *shaderNetwork, 
 	}
 	else
 	{
-		convertWalk( shaderNetwork->getOutput(), shaderNetwork, namePrefix, parentNode, result, converted );
+		auto nodeCreator = [parentNode]( const AtString &nodeType, const AtString &nodeName ) {
+			return AiNode( nodeType, nodeName, parentNode );
+		};
+		convertWalk( shaderNetwork->getOutput(), shaderNetwork, namePrefix, nodeCreator, result, converted );
 	}
 	return result;
+}
+
+bool update( std::vector<AtNode *> &nodes, const IECoreScene::ShaderNetwork *shaderNetwork, const std::string &namePrefix )
+{
+	assert( nodes.size() );
+	AtNode *parentNode = AiNodeGetParent( nodes.back() );
+
+	std::unordered_map<AtString, AtNode *, AtStringHash> originalNodes;
+	for( const auto &n : nodes )
+	{
+		originalNodes[AtString(AiNodeGetName(n))] = n;
+	}
+	const AtNode *originalOutputNode = nodes.back();
+	nodes.clear();
+
+	auto nodeCreator = [parentNode, &originalNodes]( const AtString &nodeType, const AtString &nodeName ) {
+		auto it = originalNodes.find( nodeName );
+		if( it != originalNodes.end() && AtString( AiNodeEntryGetName( AiNodeGetNodeEntry( it->second ) ) ) == nodeType )
+		{
+			// Reuse original node
+			AtNode *node = it->second;
+			originalNodes.erase( it );
+			// This relies on a bugfix in Arnold 5.3.0.0 : "#8047: AiNodeReset should
+			// not reset the node's name". Prior versions not only reset the name, but
+			// also scupper subsequent attempts to change the name back.
+			AiNodeReset( node );
+			return node;
+		}
+		return AiNode( nodeType, nodeName, parentNode );
+	};
+
+	ShaderMap converted;
+	convertWalk( shaderNetwork->getOutput(), shaderNetwork, namePrefix, nodeCreator, nodes, converted );
+
+	for( const auto &n : originalNodes )
+	{
+		AiNodeDestroy( n.second );
+	}
+
+	return nodes.size() && originalOutputNode == nodes.back();
 }
 
 } // namespace ShaderNetworkAlgo
