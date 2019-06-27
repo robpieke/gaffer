@@ -39,6 +39,7 @@
 #include "GafferScene/Private/IECoreScenePreview/Renderer.h"
 #include "GafferScene/SceneAlgo.h"
 #include "GafferScene/SceneProcessor.h"
+#include "GafferScene/SetAlgo.h"
 
 #include "Gaffer/Context.h"
 #include "Gaffer/Metadata.h"
@@ -479,6 +480,94 @@ ConstInternedStringVectorDataPtr RenderSets::setsAttribute( const std::vector<IE
 } // namespace GafferScene
 
 //////////////////////////////////////////////////////////////////////////
+// LightLinks class
+///////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+
+IECore::InternedString g_linkedLightsAttributeName( "linkedLights" );
+IECore::InternedString g_defaultLightsSetName( "defaultLights" );
+
+} // namespace
+
+namespace GafferScene
+{
+
+namespace RendererAlgo
+{
+
+LightLinks::LightLinks()
+{
+}
+
+void LightLinks::addLight( const std::string &path, IECoreScenePreview::Renderer::ObjectInterfacePtr light )
+{
+	LightsMap::accessor a;
+	m_lights.insert( a, path );
+	assert( !a->second ); // We expect `removeLight()` to be called before `addLight()` is called again
+	a->second = light;
+}
+
+void LightLinks::outputLightLinks( const ScenePlug *scene, const IECore::CompoundObject *attributes, IECoreScenePreview::Renderer::ObjectInterface *object ) const
+{
+	const StringData *setExpression = attributes->member<StringData>( g_linkedLightsAttributeName );
+
+	boost::optional<PathMatcher> paths;
+	if( setExpression )
+	{
+		paths = SetAlgo::evaluateSetExpression( setExpression->readable(), scene );
+		ConstPathMatcherDataPtr lightsSet = scene->set( g_lightsSetName );
+		paths = paths->intersection( lightsSet->readable() );
+	}
+	else
+	{
+		ScenePlug::SetScope scope( Context::current(), g_lightsSetName );
+
+		IECore::MurmurHash lightsSetHash = scene->setPlug()->hash();
+		scope.setSetName( g_defaultLightsSetName );
+		IECore::MurmurHash defaultLightsSetHash = scene->setPlug()->hash();
+
+		if( defaultLightsSetHash != lightsSetHash )
+		{
+			ConstPathMatcherDataPtr defaultLightsSetData = scene->setPlug()->getValue( &defaultLightsSetHash );
+			const PathMatcher &defaultLightsSet = defaultLightsSetData->readable();
+
+			scope.setSetName( g_lightsSetName );
+			ConstPathMatcherDataPtr lightsSetData = scene->setPlug()->getValue( &lightsSetHash );
+			const PathMatcher &lightsSet = lightsSetData->readable();
+
+			if( lightsSet != defaultLightsSet )
+			{
+				paths = lightsSet.intersection( defaultLightsSet );
+			}
+		}
+	}
+
+	IECoreScenePreview::Renderer::ObjectSetPtr objectSet;
+	if( paths )
+	{
+		objectSet = std::make_shared<IECoreScenePreview::Renderer::ObjectSet>();
+		LightsMap::accessor a;
+		std::string pathString;
+		for( PathMatcher::Iterator it = paths->begin(), eIt = paths->end(); it != eIt; ++it )
+		{
+			ScenePlug::pathToString( *it, pathString );
+			if( m_lights.find( a, pathString ) )
+			{
+				objectSet->insert( a->second );
+			}
+		}
+	}
+
+	object->links( g_linkedLightsAttributeName, objectSet );
+}
+
+} // namespace RendererAlgo
+
+} // namespace GafferScene
+
+//////////////////////////////////////////////////////////////////////////
 // Internal utilities
 ///////////////////////////////////////////////////////////////////////////
 
@@ -586,7 +675,12 @@ struct LocationOutput
 			return motionSegments( m_options.deformationBlur, g_deformationBlurAttributeName, g_deformationBlurSegmentsAttributeName );
 		}
 
-		IECoreScenePreview::Renderer::AttributesInterfacePtr attributes()
+		const IECore::CompoundObject *attributes() const
+		{
+			return m_attributes.get();
+		}
+
+		IECoreScenePreview::Renderer::AttributesInterfacePtr attributesInterface()
 		{
 			/// \todo Should we keep a cache of AttributesInterfaces so we can share
 			/// them between multiple objects, or should we rely on the renderers to
@@ -768,7 +862,7 @@ struct CameraOutput : public LocationOutput
 				IECoreScenePreview::Renderer::ObjectInterfacePtr objectInterface = renderer()->camera(
 					name( path ),
 					cameraCopy.get(),
-					attributes().get()
+					attributesInterface().get()
 				);
 
 				applyTransform( objectInterface.get() );
@@ -788,8 +882,8 @@ struct CameraOutput : public LocationOutput
 struct LightOutput : public LocationOutput
 {
 
-	LightOutput( IECoreScenePreview::Renderer *renderer, const IECore::CompoundObject *globals, const GafferScene::RendererAlgo::RenderSets &renderSets, const ScenePlug::ScenePath &root, const ScenePlug *scene )
-		:	LocationOutput( renderer, globals, renderSets, root, scene ), m_lightSet( renderSets.lightsSet() )
+	LightOutput( IECoreScenePreview::Renderer *renderer, const IECore::CompoundObject *globals, const GafferScene::RendererAlgo::RenderSets &renderSets, GafferScene::RendererAlgo::LightLinks &lightLinks, const ScenePlug::ScenePath &root, const ScenePlug *scene )
+		:	LocationOutput( renderer, globals, renderSets, root, scene ), m_lightSet( renderSets.lightsSet() ), m_lightLinks( lightLinks )
 	{
 	}
 
@@ -805,19 +899,22 @@ struct LightOutput : public LocationOutput
 		{
 			IECore::ConstObjectPtr object = scene->objectPlug()->getValue();
 
+			const std::string name = this->name( path );
 			IECoreScenePreview::Renderer::ObjectInterfacePtr objectInterface = renderer()->light(
-				name( path ),
+				name,
 				!runTimeCast<const NullObject>( object.get() ) ? object.get() : nullptr,
-				attributes().get()
+				attributesInterface().get()
 			);
 
 			applyTransform( objectInterface.get() );
+			m_lightLinks.addLight( name, objectInterface );
 		}
 
 		return lightMatch & IECore::PathMatcher::DescendantMatch;
 	}
 
 	const PathMatcher &m_lightSet;
+	GafferScene::RendererAlgo::LightLinks &m_lightLinks;
 
 };
 
@@ -846,7 +943,7 @@ struct LightFiltersOutput : public LocationOutput
 			IECoreScenePreview::Renderer::ObjectInterfacePtr objectInterface = renderer()->lightFilter(
 				name( path ),
 				!runTimeCast<const NullObject>( object.get() ) ? object.get() : nullptr,
-				attributes().get()
+				attributesInterface().get()
 			);
 
 			applyTransform( objectInterface.get() );
@@ -861,8 +958,8 @@ struct LightFiltersOutput : public LocationOutput
 struct ObjectOutput : public LocationOutput
 {
 
-	ObjectOutput( IECoreScenePreview::Renderer *renderer, const IECore::CompoundObject *globals, const GafferScene::RendererAlgo::RenderSets &renderSets, const ScenePlug::ScenePath &root, const ScenePlug *scene )
-		:	LocationOutput( renderer, globals, renderSets, root, scene ), m_cameraSet( renderSets.camerasSet() ), m_lightSet( renderSets.lightsSet() ), m_lightFiltersSet( renderSets.lightFiltersSet() )
+	ObjectOutput( IECoreScenePreview::Renderer *renderer, const IECore::CompoundObject *globals, const GafferScene::RendererAlgo::RenderSets &renderSets, GafferScene::RendererAlgo::LightLinks &lightLinks, const ScenePlug::ScenePath &root, const ScenePlug *scene )
+		:	LocationOutput( renderer, globals, renderSets, root, scene ), m_cameraSet( renderSets.camerasSet() ), m_lightSet( renderSets.lightsSet() ), m_lightFiltersSet( renderSets.lightFiltersSet() ), m_lightLinks( lightLinks )
 	{
 	}
 
@@ -886,7 +983,7 @@ struct ObjectOutput : public LocationOutput
 		}
 
 		IECoreScenePreview::Renderer::ObjectInterfacePtr objectInterface;
-		IECoreScenePreview::Renderer::AttributesInterfacePtr attributesInterface = attributes();
+		IECoreScenePreview::Renderer::AttributesInterfacePtr attributesInterface = this->attributesInterface();
 		if( !sampleTimes.size() )
 		{
 			objectInterface = renderer()->object( name( path ), samples[0].get(), attributesInterface.get() );
@@ -904,6 +1001,7 @@ struct ObjectOutput : public LocationOutput
 		}
 
 		applyTransform( objectInterface.get() );
+		m_lightLinks.outputLightLinks( scene, attributes(), objectInterface.get() );
 
 		return true;
 	}
@@ -911,6 +1009,7 @@ struct ObjectOutput : public LocationOutput
 	const PathMatcher &m_cameraSet;
 	const PathMatcher &m_lightSet;
 	const PathMatcher &m_lightFiltersSet;
+	const RendererAlgo::LightLinks &m_lightLinks;
 
 };
 
@@ -1083,23 +1182,23 @@ void outputCameras( const ScenePlug *scene, const IECore::CompoundObject *global
 	}
 }
 
-void outputLights( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, IECoreScenePreview::Renderer *renderer )
+void outputLights( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, LightLinks &lightLinks, IECoreScenePreview::Renderer *renderer )
 {
 	const ScenePlug::ScenePath root;
-	LightOutput output( renderer, globals, renderSets, root, scene );
+	LightOutput output( renderer, globals, renderSets, lightLinks, root, scene );
 	SceneAlgo::parallelProcessLocations( scene, output );
 }
 
-void outputLightFilters( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, IECoreScenePreview::Renderer *renderer )
+void outputLightFilters( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, LightLinks &lightLinks, IECoreScenePreview::Renderer *renderer )
 {
 	const ScenePlug::ScenePath root;
 	LightFiltersOutput output( renderer, globals, renderSets, root, scene );
 	SceneAlgo::parallelProcessLocations( scene, output );
 }
 
-void outputObjects( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, IECoreScenePreview::Renderer *renderer, const ScenePlug::ScenePath &root )
+void outputObjects( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, LightLinks &lightLinks, IECoreScenePreview::Renderer *renderer, const ScenePlug::ScenePath &root )
 {
-	ObjectOutput output( renderer, globals, renderSets, root, scene );
+	ObjectOutput output( renderer, globals, renderSets, lightLinks, root, scene );
 	SceneAlgo::parallelProcessLocations( scene, output, root );
 }
 
@@ -1175,7 +1274,7 @@ void applyCameraGlobals( IECoreScene::Camera *camera, const IECore::CompoundObje
 	// \todo - switch to the form above once we have officially added the depthOfField parameter to Cortex.
 	// The plan then would be that the renderer backends should respect camera->getDepthOfField.
 	// For the moment we bake into fStop instead
-	bool depthOfField = false;	
+	bool depthOfField = false;
 	if( depthOfFieldData )
 	{
 		// First set from render globals

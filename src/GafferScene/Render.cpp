@@ -297,9 +297,11 @@ void Render::execute() const
 	RendererAlgo::RenderSets renderSets( adaptedInPlug() );
 
 	RendererAlgo::outputCameras( adaptedInPlug(), globals.get(), renderSets, renderer.get() );
-	RendererAlgo::outputLights( adaptedInPlug(), globals.get(), renderSets, renderer.get() );
-	RendererAlgo::outputLightFilters( adaptedInPlug(), globals.get(), renderSets, renderer.get() );
-	RendererAlgo::outputObjects( adaptedInPlug(), globals.get(), renderSets, renderer.get() );
+
+	RendererAlgo::LightLinks lightLinks;
+	RendererAlgo::outputLights( adaptedInPlug(), globals.get(), renderSets, lightLinks, renderer.get() );
+	RendererAlgo::outputLightFilters( adaptedInPlug(), globals.get(), renderSets, lightLinks, renderer.get() );
+	RendererAlgo::outputObjects( adaptedInPlug(), globals.get(), renderSets, lightLinks, renderer.get() );
 
 	if( renderScope.sceneTranslationOnly() )
 	{

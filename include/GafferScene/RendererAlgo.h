@@ -39,6 +39,8 @@
 
 #include "GafferScene/ScenePlug.h"
 
+#include "GafferScene/Private/IECoreScenePreview/Renderer.h"
+
 #include "IECoreScene/Camera.h"
 #include "IECoreScene/VisibleRenderable.h"
 
@@ -47,14 +49,9 @@
 
 #include "boost/container/flat_map.hpp"
 
+#include "tbb/concurrent_hash_map.h"
+
 #include <functional>
-
-namespace IECoreScenePreview
-{
-
-class Renderer;
-
-} // namespace IECoreScenePreview
 
 namespace GafferScene
 {
@@ -146,10 +143,32 @@ class GAFFERSCENE_API RenderSets : boost::noncopyable
 
 };
 
+/// Utility class to declare light links to a renderer.
+class GAFFERSCENE_API LightLinks : boost::noncopyable
+{
+
+	public :
+
+		LightLinks();
+
+		void addLight( const std::string &path, IECoreScenePreview::Renderer::ObjectInterfacePtr light );
+		//void removeObject( const ScenePlug::ScenePath &path );
+
+		void outputLightLinks( const ScenePlug *scene, const IECore::CompoundObject *attributes, IECoreScenePreview::Renderer::ObjectInterface *object ) const;
+
+	private :
+
+		/// \todo Can we index by ScenePath, and if we can, is it faster?
+		/// Is concurrent_unordered_map a better choice?
+		using LightsMap = tbb::concurrent_hash_map<std::string, IECoreScenePreview::Renderer::ObjectInterfacePtr>;
+		LightsMap m_lights;
+
+};
+
 GAFFERSCENE_API void outputCameras( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, IECoreScenePreview::Renderer *renderer );
-GAFFERSCENE_API void outputLights( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, IECoreScenePreview::Renderer *renderer );
-GAFFERSCENE_API void outputLightFilters( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, IECoreScenePreview::Renderer *renderer );
-GAFFERSCENE_API void outputObjects( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, IECoreScenePreview::Renderer *renderer, const ScenePlug::ScenePath &root = ScenePlug::ScenePath() );
+GAFFERSCENE_API void outputLights( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, LightLinks &lightLinks, IECoreScenePreview::Renderer *renderer );
+GAFFERSCENE_API void outputLightFilters( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, LightLinks &lightLinks, IECoreScenePreview::Renderer *renderer );
+GAFFERSCENE_API void outputObjects( const ScenePlug *scene, const IECore::CompoundObject *globals, const RenderSets &renderSets, LightLinks &lightLinks, IECoreScenePreview::Renderer *renderer, const ScenePlug::ScenePath &root = ScenePlug::ScenePath() );
 
 /// Applies the resolution, aspect ratio etc from the globals to the camera.
 GAFFERSCENE_API void applyCameraGlobals( IECoreScene::Camera *camera, const IECore::CompoundObject *globals, const ScenePlug *scene );
