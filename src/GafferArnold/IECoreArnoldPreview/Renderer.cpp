@@ -1782,12 +1782,14 @@ namespace
 static IECore::InternedString g_surfaceAttributeName( "surface" );
 static IECore::InternedString g_aiSurfaceAttributeName( "ai:surface" );
 
-class ArnoldObject : public IECoreScenePreview::Renderer::ObjectInterface
+IE_CORE_FORWARDDECLARE( ArnoldLight )
+
+class ArnoldObjectBase : public IECoreScenePreview::Renderer::ObjectInterface
 {
 
 	public :
 
-		ArnoldObject( const Instance &instance )
+		ArnoldObjectBase( const Instance &instance )
 			:	m_instance( instance ), m_attributes( nullptr )
 		{
 		}
@@ -1829,7 +1831,7 @@ class ArnoldObject : public IECoreScenePreview::Renderer::ObjectInterface
 			return false;
 		}
 
-		void links( IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
+		void links( const IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
 		{
 		}
 
@@ -1886,13 +1888,13 @@ IE_CORE_FORWARDDECLARE( ArnoldObject )
 namespace
 {
 
-class ArnoldLightFilter : public ArnoldObject
+class ArnoldLightFilter : public ArnoldObjectBase
 {
 
 	public :
 
 		ArnoldLightFilter( const std::string &name, const Instance &instance, NodeDeleter nodeDeleter, const AtNode *parentNode )
-			:	ArnoldObject( instance ), m_name( name ), m_nodeDeleter( nodeDeleter ), m_parentNode( parentNode )
+			:	ArnoldObjectBase( instance ), m_name( name ), m_nodeDeleter( nodeDeleter ), m_parentNode( parentNode )
 		{
 		}
 
@@ -1902,7 +1904,7 @@ class ArnoldLightFilter : public ArnoldObject
 
 		void transform( const Imath::M44f &transform ) override
 		{
-			ArnoldObject::transform( transform );
+			ArnoldObjectBase::transform( transform );
 			m_transformMatrices.clear();
 			m_transformTimes.clear();
 			m_transformMatrices.push_back( transform );
@@ -1911,7 +1913,7 @@ class ArnoldLightFilter : public ArnoldObject
 
 		void transform( const std::vector<Imath::M44f> &samples, const std::vector<float> &times ) override
 		{
-			ArnoldObject::transform( samples, times );
+			ArnoldObjectBase::transform( samples, times );
 			m_transformMatrices = samples;
 			m_transformTimes = times;
 			applyLightFilterTransform();
@@ -1919,7 +1921,7 @@ class ArnoldLightFilter : public ArnoldObject
 
 		bool attributes( const IECoreScenePreview::Renderer::AttributesInterface *attributes ) override
 		{
-			if( !ArnoldObject::attributes( attributes ) )
+			if( !ArnoldObjectBase::attributes( attributes ) )
 			{
 				return false;
 			}
@@ -1999,13 +2001,13 @@ IE_CORE_DECLAREPTR( ArnoldLightFilter )
 namespace
 {
 
-class ArnoldLight : public ArnoldObject
+class ArnoldLight : public ArnoldObjectBase
 {
 
 	public :
 
 		ArnoldLight( const std::string &name, const Instance &instance, NodeDeleter nodeDeleter, const AtNode *parentNode )
-			:	ArnoldObject( instance ), m_name( name ), m_nodeDeleter( nodeDeleter ), m_parentNode( parentNode )
+			:	ArnoldObjectBase( instance ), m_name( name ), m_nodeDeleter( nodeDeleter ), m_parentNode( parentNode )
 		{
 		}
 
@@ -2015,7 +2017,7 @@ class ArnoldLight : public ArnoldObject
 
 		void transform( const Imath::M44f &transform ) override
 		{
-			ArnoldObject::transform( transform );
+			ArnoldObjectBase::transform( transform );
 			m_transformMatrices.clear();
 			m_transformTimes.clear();
 			m_transformMatrices.push_back( transform );
@@ -2024,7 +2026,7 @@ class ArnoldLight : public ArnoldObject
 
 		void transform( const std::vector<Imath::M44f> &samples, const std::vector<float> &times ) override
 		{
-			ArnoldObject::transform( samples, times );
+			ArnoldObjectBase::transform( samples, times );
 			m_transformMatrices = samples;
 			m_transformTimes = times;
 			applyLightTransform();
@@ -2032,7 +2034,7 @@ class ArnoldLight : public ArnoldObject
 
 		bool attributes( const IECoreScenePreview::Renderer::AttributesInterface *attributes ) override
 		{
-			if( !ArnoldObject::attributes( attributes ) )
+			if( !ArnoldObjectBase::attributes( attributes ) )
 			{
 				return false;
 			}
@@ -2104,6 +2106,11 @@ class ArnoldLight : public ArnoldObject
 			return true;
 		}
 
+		const ArnoldShader *lightShader() const
+		{
+			return m_lightShader.get();
+		}
+
 		void nodesCreated( vector<AtNode *> &nodes ) const
 		{
 			if( m_lightShader )
@@ -2141,6 +2148,84 @@ class ArnoldLight : public ArnoldObject
 		NodeDeleter m_nodeDeleter;
 		const AtNode *m_parentNode;
 		ArnoldShaderPtr m_lightShader;
+
+};
+
+IE_CORE_DECLAREPTR( ArnoldLight )
+
+} // namespace
+
+//////////////////////////////////////////////////////////////////////////
+// ArnoldObject
+//////////////////////////////////////////////////////////////////////////
+
+namespace
+{
+
+class ArnoldObject : public ArnoldObjectBase
+{
+
+	public :
+
+		ArnoldObject( const Instance &instance )
+			:	ArnoldObjectBase( instance )
+		{
+		}
+
+		~ArnoldObject() override
+		{
+		}
+
+		void links( const IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
+		{
+			AtNode *node = m_instance.node();
+			if( !node )
+			{
+				return;
+			}
+
+			AtString groupParameterName;
+			AtString useParameterName;
+			if( type == g_linkedLights )
+			{
+				groupParameterName = g_lightGroupArnoldString;
+				useParameterName = g_useLightGroupArnoldString;
+			}
+			else if( type == g_shadowGroup )
+			{
+				groupParameterName = g_shadowGroupArnoldString;
+				useParameterName = g_useShadowGroupArnoldString;
+			}
+			else
+			{
+				return;
+			}
+
+			if( objects )
+			{
+				vector<AtNode *> lightNodes; lightNodes.reserve( objects->size() );
+				for( const auto &o : *objects )
+				{
+					auto arnoldLight = dynamic_cast<const ArnoldLight *>( o.get() );
+					if( arnoldLight && arnoldLight->lightShader() )
+					{
+						lightNodes.push_back( arnoldLight->lightShader()->root() );
+					}
+					else
+					{
+						IECore::msg( IECore::Msg::Warning, "ArnoldObject::links()", "Attempt to link nonexistent light" );
+					}
+				}
+
+				AiNodeSetArray( node, groupParameterName, AiArrayConvert( lightNodes.size(), 1, AI_TYPE_NODE, lightNodes.data() ) );
+				AiNodeSetBool( node, useParameterName, true );
+			}
+			else
+			{
+				AiNodeResetParameter( node, groupParameterName );
+				AiNodeResetParameter( node, useParameterName );
+			}
+		}
 
 };
 
