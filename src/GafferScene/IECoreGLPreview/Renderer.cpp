@@ -248,6 +248,10 @@ class OpenGLObject : public IECoreScenePreview::Renderer::ObjectInterface
 			return true;
 		}
 
+		void links( IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
+		{
+		}
+
 		Box3f transformedBound() const
 		{
 			Box3f b;

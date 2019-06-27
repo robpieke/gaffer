@@ -925,6 +925,10 @@ class DelightObject : public IECoreScenePreview::Renderer::ObjectInterface
 			return true;
 		}
 
+		void links( IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
+		{
+		}
+
 	private :
 
 		const DelightHandle m_transformHandle;

@@ -265,6 +265,10 @@ class AppleseedEntity : public IECoreScenePreview::Renderer::ObjectInterface
 			return m_name;
 		}
 
+		void links( IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
+		{
+		}
+
 	protected :
 
 		AppleseedEntity( asr::Project &project, const string &name, bool interactiveRender )

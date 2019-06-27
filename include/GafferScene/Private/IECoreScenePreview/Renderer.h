@@ -188,8 +188,7 @@ class IECORESCENE_API Renderer : public IECore::RefCounted
 				/// geometric representation.
 				virtual bool attributes( const AttributesInterface *attributes ) = 0;
 				/// Declares links between this object and others.
-				/// \todo MAKE PURE VIRTUAL.
-				virtual void links( IECore::InternedString &type, const ObjectSetPtr &objects ) {};
+				virtual void links( IECore::InternedString &type, const ObjectSetPtr &objects ) = 0;
 
 			protected :
 
