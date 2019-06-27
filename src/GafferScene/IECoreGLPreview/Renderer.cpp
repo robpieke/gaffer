@@ -248,7 +248,7 @@ class OpenGLObject : public IECoreScenePreview::Renderer::ObjectInterface
 			return true;
 		}
 
-		void links( IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
+		void links( const IECore::InternedString &type, const IECoreScenePreview::Renderer::ObjectSetPtr &objects ) override
 		{
 		}
 
