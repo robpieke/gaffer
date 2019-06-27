@@ -1826,6 +1826,98 @@ class InteractiveRenderTest( GafferSceneTest.SceneTestCase ) :
 		# \todo: This should also test the light linking functionaly provided by
 		# StandardAttributes
 
+	def testHideLinkedLight( self ) :
+
+		s = Gaffer.ScriptNode()
+
+		# One default light and one non-default light, which will
+		# result in light links being emitted to the renderer.
+
+		s["defaultLight"], colorPlug = self._createPointLight()
+		s["defaultLight"]["name"].setValue( "defaultPointLight" )
+		colorPlug.setValue( imath.Color3f( 1, 0, 0 ) )
+		s["defaultLight"]["transform"]["translate"]["z"].setValue( 1 )
+
+		s["defaultLightAttributes"] = GafferScene.StandardAttributes()
+		s["defaultLightAttributes"]["in"].setInput( s["defaultLight"]["out"] )
+
+		s["nonDefaultLight"], colorPlug = self._createPointLight()
+		s["nonDefaultLight"]["name"].setValue( "nonDefaultPointLight" )
+		s["nonDefaultLight"]["defaultLight"].setValue( False )
+		colorPlug.setValue( imath.Color3f( 0, 1, 0 ) )
+		s["nonDefaultLight"]["transform"]["translate"]["z"].setValue( 1 )
+
+		s["plane"] = GafferScene.Plane()
+
+		s["camera"] = GafferScene.Camera()
+		s["camera"]["transform"]["translate"]["z"].setValue( 1 )
+
+		s["group"] = GafferScene.Group()
+		s["group"]["in"][0].setInput( s["defaultLightAttributes"]["out"] )
+		s["group"]["in"][1].setInput( s["nonDefaultLight"]["out"] )
+		s["group"]["in"][2].setInput( s["plane"]["out"] )
+		s["group"]["in"][3].setInput( s["camera"]["out"] )
+
+		s["shader"], unused = self._createMatteShader()
+		s["shaderAssignment"] = GafferScene.ShaderAssignment()
+		s["shaderAssignment"]["in"].setInput( s["group"]["out"] )
+		s["shaderAssignment"]["shader"].setInput( s["shader"]["out"] )
+
+		s["outputs"] = GafferScene.Outputs()
+		s["outputs"].addOutput(
+			"beauty",
+			IECoreScene.Output(
+				"test",
+				"ieDisplay",
+				"rgba",
+				{
+					"quantize" : IECore.IntVectorData( [ 0, 0, 0, 0 ] ),
+					"driverType" : "ImageDisplayDriver",
+					"handle" : "myLovelyPlane",
+				}
+			)
+		)
+		s["outputs"]["in"].setInput( s["shaderAssignment"]["out"] )
+
+		s["options"] = GafferScene.StandardOptions()
+		s["options"]["options"]["renderCamera"]["value"].setValue( "/group/camera" )
+		s["options"]["options"]["renderCamera"]["enabled"].setValue( True )
+		s["options"]["in"].setInput( s["outputs"]["out"] )
+
+		s["renderer"] = self._createInteractiveRender()
+		s["renderer"]["in"].setInput( s["options"]["out"] )
+
+		s["fileName"].setValue( "/tmp/test.gfr" )
+		s.save()
+
+		# Start a render, give it time to finish, and check the output.
+		# We should get light only from the default light, and not the
+		# other one.
+
+		s["renderer"]["state"].setValue( s["renderer"].State.Running )
+
+		time.sleep( 2 )
+
+		c = self._color3fAtUV(
+			IECoreImage.ImageDisplayDriver.storedImage( "myLovelyPlane" ),
+			imath.V2f( 0.5 ),
+		)
+		self.assertNotEqual( c[0], 0 )
+		self.assertEqual( c / c[0], imath.Color3f( 1, 0, 0 ) )
+
+		# Hide the default light. We should get a black render.
+
+		s["defaultLightAttributes"]["attributes"]["visibility"]["enabled"].setValue( True )
+		s["defaultLightAttributes"]["attributes"]["visibility"]["value"].setValue( False )
+
+		time.sleep( 1 )
+
+		c = self._color3fAtUV(
+			IECoreImage.ImageDisplayDriver.storedImage( "myLovelyPlane" ),
+			imath.V2f( 0.5 ),
+		)
+		self.assertEqual( c, imath.Color3f( 0, 0, 0 ) )
+
 	def tearDown( self ) :
 
 		GafferSceneTest.SceneTestCase.tearDown( self )
