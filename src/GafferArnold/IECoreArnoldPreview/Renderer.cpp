@@ -580,7 +580,7 @@ class ArnoldShader : public IECore::RefCounted
 	public :
 
 		ArnoldShader( const IECoreScene::ShaderNetwork *shaderNetwork, NodeDeleter nodeDeleter, const std::string &namePrefix, const AtNode *parentNode )
-			:	m_namePrefix( namePrefix ), m_nodeDeleter( nodeDeleter )
+			:	m_nodeDeleter( nodeDeleter )
 		{
 			m_nodes = ShaderNetworkAlgo::convert( shaderNetwork, namePrefix, parentNode );
 		}
@@ -591,14 +591,6 @@ class ArnoldShader : public IECore::RefCounted
 			{
 				m_nodeDeleter( *it );
 			}
-		}
-
-		bool update( const IECoreScene::ShaderNetwork *shaderNetwork )
-		{
-			// `ShaderNetworkAlgo::update()` will destroy unwanted nodes, so we can
-			// only call it if we're responsible for deleting them in the first place.
-			assert( m_nodeDeleter == AiNodeDestroy );
-			return ShaderNetworkAlgo::update( m_nodes, shaderNetwork, m_namePrefix );
 		}
 
 		AtNode *root() const
@@ -613,7 +605,6 @@ class ArnoldShader : public IECore::RefCounted
 
 	private :
 
-		const std::string m_namePrefix;
 		NodeDeleter m_nodeDeleter;
 		std::vector<AtNode *> m_nodes;
 
@@ -2233,32 +2224,46 @@ class ArnoldLight : public ArnoldObject
 
 			// Update light shader.
 
-			if( !m_lightShader )
+			// We're currently seeing crashes that we suspect to be related to
+			// the comment below. In order to track down what's really
+			// happening, we'll explicitly compare the pointers and emit a
+			// warning if they don't match.
+			const AtNode *oldRoot = m_lightShader ? m_lightShader->root() : nullptr;
+
+			// Delete current light shader, destroying all AtNodes it owns. It
+			// is crucial that we do this _before_ constructing a new
+			// ArnoldShader (and therefore AtNodes) below, because we are
+			// relying on a specific behaviour of the Arnold node allocator.
+			// When we destroy the light node, Arnold does not remove it from
+			// any of the `light_group` arrays we have assigned to geometry,
+			// meaning they will contain a dangling pointer. If we destroy the
+			// old AtNode first, we get lucky, and Arnold will allocate the new
+			// one at the _exact same address_ as the old one, keeping our
+			// arrays valid. We have been accidentally relying on this behaviour
+			// for some time, and for now continue to rely on it in lieu of a
+			// more complex fix which might involve a `LightLinkManager` that is
+			// able to track and patch up any affected light links. Because of
+			// the extra bookkeeping involved in such an approach, we would want
+			// to keep its use to a minimum. We could achieve that for the
+			// common case by editing the light node's parameters in place, only
+			// creating a new light node when the type has changed.
+			m_lightShader = nullptr;
+
+			if( !arnoldAttributes->lightShader() )
 			{
-				std::cerr << "MAKING LIGHT SHADER FOR FIRST TIME " << this << std::endl;
-				m_lightShader = new ArnoldShader( arnoldAttributes->lightShader(), m_nodeDeleter, "light:" + m_name + ":", m_parentNode );
-				// Simplify name for the root shader, for ease of reading of ass files.
-				/// THIS IS NOT JUST FOR ASS FILES!!!!!! LIGHT LINKING IS TOTALLY
-				/// RELYING ON IT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				const std::string name = "light:" + m_name;
-				AiNodeSetStr( m_lightShader->root(), g_nameArnoldString, AtString( name.c_str() ) );
-				m_connections->registerLight( m_name, this );
-				std::cerr << "MADE LIGHT SHADER" << std::endl;
+				return true;
 			}
-			else
+
+			m_lightShader = new ArnoldShader( arnoldAttributes->lightShader(), m_nodeDeleter, "light:" + m_name + ":", m_parentNode );
+
+			if( oldRoot && oldRoot != m_lightShader->root() )
 			{
-				std::cerr << "THINKING ABOUT UPDATING " << this << std::endl;
-				if( !arnoldAttributes->lightShader() )
-				{
-					return false;
-				}
-				bool keptRootShader = m_lightShader->update( arnoldAttributes->lightShader() );
-				if( !keptRootShader )
-				{
-					std::cerr << "FAILING!" << std::endl;
-					return false;
-				}
+				IECore::msg( IECore::Msg::Warning, "ArnoldRenderer", boost::str( boost::format( "When updating ArnoldShader, Arnold's memory allocation didn't meet our expectations: %p != %p" ) % oldRoot % m_lightShader->root() ) );
 			}
+
+			// Simplify name for the root shader, for ease of reading of ass files.
+			const std::string name = "light:" + m_name;
+			AiNodeSetStr( m_lightShader->root(), g_nameArnoldString, AtString( name.c_str() ) );
 
 			// Deal with mesh lights.
 
@@ -2276,9 +2281,15 @@ class ArnoldLight : public ArnoldObject
 				}
 			}
 
-			applyLightTransform();
+			// Deal with light filter connections
 
-			std::cerr << "FINISHED ATTRIBUTE UPDATE" << std::endl;
+			// We re-register the light here because the light shader has been
+			// replaced above. Without re-registering we wouldn't get a chance
+			// to set the connections on that new shader in our `updateFilters`
+			// method.
+			m_connections->registerLight( m_name, this );
+
+			applyLightTransform();
 
 			return true;
 		}
