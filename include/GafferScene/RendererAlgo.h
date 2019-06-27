@@ -158,6 +158,8 @@ class GAFFERSCENE_API LightLinks : boost::noncopyable
 
 	private :
 
+		void outputLightLinks( const ScenePlug *scene, const IECore::CompoundObject *attribute, const IECore::InternedString &attributeName, IECoreScenePreview::Renderer::ObjectInterface *object ) const;
+
 		/// \todo Can we index by ScenePath, and if we can, is it faster?
 		/// Is concurrent_unordered_map a better choice?
 		using LightsMap = tbb::concurrent_hash_map<std::string, IECoreScenePreview::Renderer::ObjectInterfacePtr>;

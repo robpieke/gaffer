@@ -488,6 +488,7 @@ namespace
 
 IECore::InternedString g_linkedLightsAttributeName( "linkedLights" );
 IECore::InternedString g_defaultLightsSetName( "defaultLights" );
+IECore::InternedString g_shadowGroupAttributeName( "ai:visibility:shadow_group" );
 
 } // namespace
 
@@ -511,7 +512,18 @@ void LightLinks::addLight( const std::string &path, IECoreScenePreview::Renderer
 
 void LightLinks::outputLightLinks( const ScenePlug *scene, const IECore::CompoundObject *attributes, IECoreScenePreview::Renderer::ObjectInterface *object ) const
 {
-	const StringData *setExpression = attributes->member<StringData>( g_linkedLightsAttributeName );
+	outputLightLinks( scene, attributes, g_linkedLightsAttributeName, object );
+	/// \todo This is Arnold-specific. We could consider making it a standard,
+	/// or if we find we need to support other renderer-specific attributes, we
+	/// could add a mechanism for registering them.
+	outputLightLinks( scene, attributes, g_shadowGroupAttributeName, object );
+}
+
+void LightLinks::outputLightLinks( const ScenePlug *scene, const IECore::CompoundObject *attributes, const IECore::InternedString &attributeName, IECoreScenePreview::Renderer::ObjectInterface *object ) const
+{
+	const StringData *setExpression = attributes->member<StringData>( attributeName );
+
+	/// CACHE ME!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 	boost::optional<PathMatcher> paths;
 	if( setExpression )
@@ -560,7 +572,7 @@ void LightLinks::outputLightLinks( const ScenePlug *scene, const IECore::Compoun
 		}
 	}
 
-	object->links( g_linkedLightsAttributeName, objectSet );
+	object->links( attributeName, objectSet );
 }
 
 } // namespace RendererAlgo
