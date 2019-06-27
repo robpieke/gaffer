@@ -172,7 +172,10 @@ void Capsule::render( IECoreScenePreview::Renderer *renderer ) const
 	IECore::ConstCompoundObjectPtr globals = m_scene->globalsPlug()->getValue();
 	RendererAlgo::RenderSets renderSets( m_scene );
 	Context::Scope scope( m_context.get() );
-	RendererAlgo::outputObjects( m_scene, globals.get(), renderSets, renderer, m_root );
+	// WHAT DO WE DO ABOUT LIGHT LINKS HERE? I SUPPOSE ON THE BRIGHT SIDE WE DON'T
+	// ACTUALLY SUPPORT LIGHTS IN CAPSULES ANYWAY, SO MAYBE JUST LINKING THE PROCEDURAL
+	// AND NOT LINKING INTERNALLY WILL BE SUFFICIENT?
+	//RendererAlgo::outputObjects( m_scene, globals.get(), renderSets, renderer, m_root );
 }
 
 const ScenePlug *Capsule::scene() const
